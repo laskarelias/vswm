@@ -1,9 +1,3 @@
-//static const char BORDER_COLOR[] = "#008080";
-#define BORDER_COLOR 0x008080
-#define BORDER_WIDTH 10
-
-static const int LOG = 0;
-
 /* VSWM - Very Small Window Manager
  * VSWM - Very Simple Window Manager
  *
@@ -14,8 +8,17 @@ static const int LOG = 0;
 #include <X11/Xlib.h>
 #include <stdio.h>
 
+#include "config.h"
+
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
+
+void lll(char msg[]){
+    FILE * fp;
+    fp = fopen("log.txt", "a");
+    fprintf(fp, "%s \n", msg);
+    fclose(fp);
+}
 
 int main(void)
 {
@@ -24,25 +27,26 @@ int main(void)
     XButtonEvent start;
     XEvent ev;
 
-    FILE * fp;
-
     int wx, wy;
     unsigned int ww, wh;
 
     if(!(dpy = XOpenDisplay(0x0))) return 1;
 
-    XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
+    lll("session");
+
+    XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask | EnterWindowMask | LeaveWindowMask);
     XGrabButton(dpy, 1, Mod1Mask, DefaultRootWindow(dpy), True,
             ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     XGrabButton(dpy, 3, Mod1Mask, DefaultRootWindow(dpy), True,
             ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-
+    XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("c")), Mod1Mask, DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
 
     start.subwindow = None;
     for(;;)
     {
         XNextEvent(dpy, &ev);
         if(ev.type == ConfigureRequest) {
+            lll("got configurerequest");
             XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &(XWindowChanges) {
                                 .x = ev.xconfigurerequest.x,
                                 .y = ev.xconfigurerequest.y,
@@ -53,6 +57,7 @@ int main(void)
             XSetWindowBorder(dpy, ev.xconfigurerequest.window, BORDER_COLOR);
         }
         if(ev.type == MapRequest) {
+            lll("got maprequest");
             wx = wy = 0;
             ww = wh = 0;
             win_size(ev.xmaprequest.window, &wx, &wy, &ww, &wh);
@@ -62,8 +67,16 @@ int main(void)
             XMapWindow(dpy, ev.xmaprequest.window);
         }
 
-        if (ev.type == DestroyNotify) {
-            XKillClient(dpy, ev.xdestroywindow.window);
+//       if (ev.type == DestroyNotify) {
+//           lll("got destroynotify");
+//           XGrabServer(dpy);
+//           XSetCloseDownMode(dpy, DestroyAll);
+//           XKillClient(dpy, ev.xdestroywindow.window);
+//           XUngrabServer(dpy);
+//       }
+        if (ev.type == KeyPress) {
+            lll("got keypress");
+            XKillClient(dpy, ev.xkey.subwindow);
         }
 
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
@@ -71,7 +84,7 @@ int main(void)
             XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
             start = ev.xbutton;
         }
-        else if(ev.type == MotionNotify && start.subwindow != None) {
+        if(ev.type == MotionNotify && start.subwindow != None) {
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
             XMoveResizeWindow(dpy, start.subwindow,
