@@ -1,4 +1,7 @@
-static const int BORDER_WIDTH = 5;
+//static const char BORDER_COLOR[] = "#008080";
+#define BORDER_COLOR 0x008080
+#define BORDER_WIDTH 10
+
 static const int LOG = 0;
 
 /* VSWM - Very Small Window Manager
@@ -45,23 +48,24 @@ int main(void)
                                 .y = ev.xconfigurerequest.y,
                                 .width = ev.xconfigurerequest.width,
                                 .height = ev.xconfigurerequest.height,
+                                .border_width = BORDER_WIDTH
                              });
-
-        
+            XSetWindowBorder(dpy, ev.xconfigurerequest.window, BORDER_COLOR);
         }
         if(ev.type == MapRequest) {
             wx = wy = 0;
             ww = wh = 0;
             win_size(ev.xmaprequest.window, &wx, &wy, &ww, &wh);
-            if (LOG) {
-                fp = fopen("log.txt", "a");
-                fprintf(fp, "MΑP --- x = %d   y = %d   w = %d   h = %d \n", wx, wy, ww, wh);
-                fclose(fp);
-            }
             XMoveResizeWindow(dpy, ev.xmaprequest.window, wx, wy, ww, wh);
             XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
+            XSetWindowBorder(dpy, ev.xmaprequest.window, BORDER_COLOR);
             XMapWindow(dpy, ev.xmaprequest.window);
         }
+
+        if (ev.type == DestroyNotify) {
+            XKillClient(dpy, ev.xdestroywindow.window);
+        }
+
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
             XRaiseWindow(dpy, ev.xbutton.subwindow);
             XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
