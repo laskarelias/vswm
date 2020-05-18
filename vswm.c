@@ -8,10 +8,14 @@
 #include <X11/Xlib.h>
 #include <stdio.h>
 
-#include "config.h"
+//#include "config.h"
+//#include "vswm.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
+
+#define BORDER_COLOR 0x008080
+#define BORDER_WIDTH 5
 
 void lll(char msg[]){
     FILE * fp;
@@ -19,6 +23,16 @@ void lll(char msg[]){
     fprintf(fp, "%s \n", msg);
     fclose(fp);
 }
+
+void key_handler(XEvent ev) {
+    lll("handled a key");
+}
+
+//void key_init(Display* dpy) {
+//    for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
+//        XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i][1])), keys[i][0], DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+//    } 
+//}
 
 int main(void)
 {
@@ -67,16 +81,9 @@ int main(void)
             XMapWindow(dpy, ev.xmaprequest.window);
         }
 
-//       if (ev.type == DestroyNotify) {
-//           lll("got destroynotify");
-//           XGrabServer(dpy);
-//           XSetCloseDownMode(dpy, DestroyAll);
-//           XKillClient(dpy, ev.xdestroywindow.window);
-//           XUngrabServer(dpy);
-//       }
         if (ev.type == KeyPress) {
             lll("got keypress");
-            XKillClient(dpy, ev.xkey.subwindow);
+//            key_handler(ev);
         }
 
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
