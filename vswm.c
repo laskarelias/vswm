@@ -8,14 +8,10 @@
 #include <X11/Xlib.h>
 #include <stdio.h>
 
-//#include "config.h"
-//#include "vswm.h"
+#include "config.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
-
-#define BORDER_COLOR 0x008080
-#define BORDER_WIDTH 5
 
 void lll(char msg[]){
     FILE * fp;
@@ -24,19 +20,34 @@ void lll(char msg[]){
     fclose(fp);
 }
 
-void key_handler(XEvent ev) {
+void key_handler(Display* dpy, XEvent ev) {
     lll("handled a key");
+    for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
+        if ( (keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode) ) {
+            keys[i].function(dpy, ev);
+        }
+    }
 }
 
-//void key_init(Display* dpy) {
-//    for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
-//        XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i][1])), keys[i][0], DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-//    } 
-//}
+void key_init(Display* dpy) {
+    for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
+        XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)), keys[i].modifiers, DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+    } 
+}
+
+/* Functions */
+void close(Display* dpy, XEvent ev) {
+   XKillClient(dpy, ev.xkey.subwindow); 
+}
+
+void maximize(Display* dpy, XEvent ev) {
+    XMoveResizeWindow(dpy, ev.xkey.subwindow, 0, 0, XDisplayWidth(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH, XDisplayHeight(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH);
+}
+
 
 int main(void)
 {
-    Display * dpy;
+    Display* dpy;
     XWindowAttributes attr;
     XButtonEvent start;
     XEvent ev;
@@ -49,15 +60,12 @@ int main(void)
     lll("session");
 
     XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask | EnterWindowMask | LeaveWindowMask);
-    XGrabButton(dpy, 1, Mod1Mask, DefaultRootWindow(dpy), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-    XGrabButton(dpy, 3, Mod1Mask, DefaultRootWindow(dpy), True,
-            ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-    XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym("c")), Mod1Mask, DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
+    XGrabButton(dpy, 1, Mod1Mask, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    XGrabButton(dpy, 3, Mod1Mask, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    key_init(dpy);
 
     start.subwindow = None;
-    for(;;)
-    {
+    for(;;) {
         XNextEvent(dpy, &ev);
         if(ev.type == ConfigureRequest) {
             lll("got configurerequest");
@@ -83,7 +91,7 @@ int main(void)
 
         if (ev.type == KeyPress) {
             lll("got keypress");
-//            key_handler(ev);
+            key_handler(dpy, ev);
         }
 
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {

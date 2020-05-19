@@ -1,13 +1,14 @@
-#include <X11/Xlib.h>
+#include "vswm.h"
 
 #define BORDER_COLOR 0x008080
 #define BORDER_WIDTH 5
 
-#define alt Mod1Mask
-#define super Mod4Mask
-#define shift ShiftMask
+#define ctrl (1<<2)
+#define alt (1<<3)
+#define super (1<<6)
+#define shift (1<<0)
 
- const char* keys[][2] = {
-    { alt, "c" },
-    { alt, "m" },
- };
+combo keys[] = {
+    { alt, "c", close    },
+    { alt, "m", maximize },
+};
