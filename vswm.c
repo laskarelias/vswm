@@ -13,6 +13,8 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
 
+static unsigned int running = 1;
+
 void lll(char msg[]){
     FILE * fp;
     fp = fopen("log.txt", "a");
@@ -37,7 +39,8 @@ void key_init(Display* dpy) {
 
 /* Functions */
 void close(Display* dpy, XEvent ev) {
-   XKillClient(dpy, ev.xkey.subwindow); 
+    XSelectInput(dpy, ev.xkey.subwindow, NoEventMask);
+    XKillClient(dpy, ev.xkey.subwindow); 
 }
 
 void maximize(Display* dpy, XEvent ev) {
@@ -64,9 +67,12 @@ void move_u(Display* dpy, XEvent ev) {
 
 void move_d(Display* dpy, XEvent ev) {
     XWindowAttributes attr;
-	lll("move d");
     XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
     XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x, attr.y + MOVE_DELTA, attr.width, attr.height);
+}
+
+void logout(Display* dpy, XEvent ev) {
+    running = 0;
 }
 
 int main(void)
@@ -83,16 +89,15 @@ int main(void)
 
     lll("session");
 
-    XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask | EnterWindowMask | LeaveWindowMask);
+    XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
     XGrabButton(dpy, 1, Mod1Mask, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     XGrabButton(dpy, 3, Mod1Mask, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     key_init(dpy);
 
     start.subwindow = None;
-    for(;;) {
+    while(running) {
         XNextEvent(dpy, &ev);
         if(ev.type == ConfigureRequest) {
-            lll("got configurerequest");
             XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &(XWindowChanges) {
                                 .x = ev.xconfigurerequest.x,
                                 .y = ev.xconfigurerequest.y,
@@ -100,22 +105,30 @@ int main(void)
                                 .height = ev.xconfigurerequest.height,
                                 .border_width = BORDER_WIDTH
                              });
-            XSetWindowBorder(dpy, ev.xconfigurerequest.window, BORDER_COLOR);
+            //XSetWindowBorder(dpy, ev.xconfigurerequest.window, ACTIVE_COLOR);
         }
         if(ev.type == MapRequest) {
-            lll("got maprequest");
             wx = wy = 0;
             ww = wh = 0;
             win_size(ev.xmaprequest.window, &wx, &wy, &ww, &wh);
+            XSelectInput(dpy, ev.xmaprequest.window, EnterWindowMask | LeaveWindowMask);
             XMoveResizeWindow(dpy, ev.xmaprequest.window, wx, wy, ww, wh);
             XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
-            XSetWindowBorder(dpy, ev.xmaprequest.window, BORDER_COLOR);
             XMapWindow(dpy, ev.xmaprequest.window);
+            //XSetWindowBorder(dpy, ev.xmaprequest.window, INACTIVE_COLOR);
         }
 
         if (ev.type == KeyPress) {
-            lll("got keypress");
             key_handler(dpy, ev);
+        }
+
+        if (ev.type == LeaveNotify) {
+           XSetWindowBorder(dpy, ev.xcrossing.window, INACTIVE_COLOR);
+        }
+
+        if (ev.type == EnterNotify) {
+           XRaiseWindow(dpy, ev.xcrossing.window);     
+           XSetWindowBorder(dpy, ev.xcrossing.window, ACTIVE_COLOR);
         }
 
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {

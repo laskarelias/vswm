@@ -13,3 +13,4 @@ void move_l(Display* dpy, XEvent ev);
 void move_r(Display* dpy, XEvent ev);
 void move_u(Display* dpy, XEvent ev);
 void move_d(Display* dpy, XEvent ev);
+void logout(Display* dpy, XEvent ev);
