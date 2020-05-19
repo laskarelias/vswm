@@ -9,3 +9,7 @@ void key_init();
 void key_handler(Display* dpy, XEvent ev);
 void maximize(Display* dpy, XEvent ev);
 void close(Display* dpy, XEvent ev);
+void move_l(Display* dpy, XEvent ev);
+void move_r(Display* dpy, XEvent ev);
+void move_u(Display* dpy, XEvent ev);
+void move_d(Display* dpy, XEvent ev);

@@ -44,6 +44,30 @@ void maximize(Display* dpy, XEvent ev) {
     XMoveResizeWindow(dpy, ev.xkey.subwindow, 0, 0, XDisplayWidth(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH, XDisplayHeight(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH);
 }
 
+void move_l(Display* dpy, XEvent ev) {
+    XWindowAttributes attr;
+    XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
+    XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x - MOVE_DELTA, attr.y, attr.width, attr.height);
+}
+
+void move_r(Display* dpy, XEvent ev) {
+    XWindowAttributes attr;
+    XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
+    XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
+}
+
+void move_u(Display* dpy, XEvent ev) {
+    XWindowAttributes attr;
+    XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
+    XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x, attr.y - MOVE_DELTA, attr.width, attr.height);
+}
+
+void move_d(Display* dpy, XEvent ev) {
+    XWindowAttributes attr;
+	lll("move d");
+    XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
+    XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x, attr.y + MOVE_DELTA, attr.width, attr.height);
+}
 
 int main(void)
 {
