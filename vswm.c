@@ -14,6 +14,7 @@
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
 
 static unsigned int running = 1;
+static Window active = 0;
 
 void lll(char msg[]){
     FILE * fp;
@@ -23,7 +24,6 @@ void lll(char msg[]){
 }
 
 void key_handler(Display* dpy, XEvent ev) {
-    lll("handled a key");
     for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
         if ( (keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode) ) {
             keys[i].function(dpy, ev);
@@ -39,36 +39,51 @@ void key_init(Display* dpy) {
 
 /* Functions */
 void close(Display* dpy, XEvent ev) {
-    XSelectInput(dpy, ev.xkey.subwindow, NoEventMask);
-    XKillClient(dpy, ev.xkey.subwindow); 
+    if (active) {
+        XSelectInput(dpy, active, NoEventMask);
+        XKillClient(dpy, active); 
+        active = 0;
+    }
 }
 
 void maximize(Display* dpy, XEvent ev) {
-    XMoveResizeWindow(dpy, ev.xkey.subwindow, 0, 0, XDisplayWidth(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH, XDisplayHeight(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH);
+    if (active) {
+        XMoveResizeWindow(dpy, active, 0, 0, XDisplayWidth(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH, XDisplayHeight(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH);
+    }
 }
 
 void move_l(Display* dpy, XEvent ev) {
-    XWindowAttributes attr;
-    XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
-    XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x - MOVE_DELTA, attr.y, attr.width, attr.height);
+    if (active) {
+        XWindowAttributes attr;
+        XGetWindowAttributes(dpy, active, &attr);
+        XMoveResizeWindow(dpy, active, attr.x - MOVE_DELTA, attr.y, attr.width, attr.height);
+        //XSetInputFocus(dpy, active, RevertToParent, CurrentTime);
+    }
 }
 
 void move_r(Display* dpy, XEvent ev) {
-    XWindowAttributes attr;
-    XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
-    XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
+    if (active) {
+        XWindowAttributes attr;
+        XGetWindowAttributes(dpy, active, &attr);
+        XMoveResizeWindow(dpy, active, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
+        //XSetInputFocus(dpy, ev.xkey.subwindow, RevertToParent, CurrentTime);
+    }
 }
 
 void move_u(Display* dpy, XEvent ev) {
-    XWindowAttributes attr;
-    XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
-    XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x, attr.y - MOVE_DELTA, attr.width, attr.height);
+    if (active) {
+        XWindowAttributes attr;
+        XGetWindowAttributes(dpy, active, &attr);
+        XMoveResizeWindow(dpy, active, attr.x, attr.y - MOVE_DELTA, attr.width, attr.height);
+    }
 }
 
 void move_d(Display* dpy, XEvent ev) {
-    XWindowAttributes attr;
-    XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
-    XMoveResizeWindow(dpy, ev.xkey.subwindow, attr.x, attr.y + MOVE_DELTA, attr.width, attr.height);
+    if (active) {
+        XWindowAttributes attr;
+        XGetWindowAttributes(dpy, active, &attr);
+        XMoveResizeWindow(dpy, active, attr.x, attr.y + MOVE_DELTA, attr.width, attr.height);
+    }
 }
 
 void logout(Display* dpy, XEvent ev) {
@@ -77,10 +92,10 @@ void logout(Display* dpy, XEvent ev) {
 
 int main(void)
 {
-    Display* dpy;
+    static Display* dpy;
     XWindowAttributes attr;
     XButtonEvent start;
-    XEvent ev;
+    static XEvent ev;
 
     int wx, wy;
     unsigned int ww, wh;
@@ -105,31 +120,45 @@ int main(void)
                                 .height = ev.xconfigurerequest.height,
                                 .border_width = BORDER_WIDTH
                              });
-            //XSetWindowBorder(dpy, ev.xconfigurerequest.window, ACTIVE_COLOR);
         }
         if(ev.type == MapRequest) {
             wx = wy = 0;
             ww = wh = 0;
             win_size(ev.xmaprequest.window, &wx, &wy, &ww, &wh);
-            XSelectInput(dpy, ev.xmaprequest.window, EnterWindowMask | LeaveWindowMask);
+            XSelectInput(dpy, ev.xmaprequest.window, EnterWindowMask | FocusChangeMask);
             XMoveResizeWindow(dpy, ev.xmaprequest.window, wx, wy, ww, wh);
             XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
             XMapWindow(dpy, ev.xmaprequest.window);
-            //XSetWindowBorder(dpy, ev.xmaprequest.window, INACTIVE_COLOR);
+            if (!active) { XSetInputFocus(dpy, ev.xmaprequest.window, RevertToParent, CurrentTime); }
         }
 
         if (ev.type == KeyPress) {
             key_handler(dpy, ev);
         }
 
-        if (ev.type == LeaveNotify) {
-           XSetWindowBorder(dpy, ev.xcrossing.window, INACTIVE_COLOR);
+        if (ev.type == EnterNotify) {
+            XSetInputFocus(dpy, ev.xcrossing.window, RevertToParent, CurrentTime);
+        }
+        if (ev.type == DestroyNotify) {
+            lll("destroynotify");
+            XSetInputFocus(dpy, ev.xdestroywindow.window, RevertToParent, CurrentTime);
+            if (active == ev.xdestroywindow.window) { active = 0; }
+            XKillClient(dpy, ev.xdestroywindow.window);
         }
 
-        if (ev.type == EnterNotify) {
-           XRaiseWindow(dpy, ev.xcrossing.window);     
-           XSetWindowBorder(dpy, ev.xcrossing.window, ACTIVE_COLOR);
+        if (ev.type == UnmapNotify) {
+            XSelectInput(dpy, ev.xunmap.window, NoEventMask);
+            XUnmapWindow(dpy, ev.xunmap.window);
         }
+        
+        if (ev.type == FocusIn) {
+            active = ev.xfocus.window;
+            XSetWindowBorder(dpy, ev.xfocus.window, ACTIVE_COLOR);
+        }
+        if (ev.type == FocusOut) {
+            XSetWindowBorder(dpy, ev.xfocus.window, INACTIVE_COLOR);
+        }
+
 
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
             XRaiseWindow(dpy, ev.xbutton.subwindow);

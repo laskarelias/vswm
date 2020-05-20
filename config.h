@@ -1,7 +1,7 @@
 #include "vswm.h"
 
-#define ACTIVE_COLOR 0x000000
-#define INACTIVE_COLOR 0xa0a0a0
+#define ACTIVE_COLOR 0xff0000
+#define INACTIVE_COLOR 0x000080
 #define BORDER_WIDTH 5
 #define MOVE_DELTA 20
 
