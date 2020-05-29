@@ -9,12 +9,12 @@
 #include <stdio.h>
 
 #include "config.h"
+#include <X11/bitmaps/boxes>
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
 
 static unsigned int running = 1;
-static Window active = 0;
 
 void lll(char msg[]){
     FILE * fp;
@@ -25,9 +25,12 @@ void lll(char msg[]){
 
 int error_handler(Display* dpy, XErrorEvent* ev){
    lll("[ ERROR ]");
-   FILE * fp = fopen("log.txt", "a");
-   fprintf(fp, "%d \n", ev->error_code);
-   fclose(fp);
+   char err[48];
+   XGetErrorText(dpy, ev->error_code, err, 48);
+//   FILE * fp = fopen("log.txt", "a");
+//   fprintf(fp, "%s \n", ev->error_code);
+//   fclose(fp);
+   lll(err);
    return 0;
 }
 
@@ -77,16 +80,12 @@ void move(Display* dpy, XEvent ev, int arg) {
         switch(arg) {
             case LEFT:
                 XMoveResizeWindow(dpy, active, attr.x - MOVE_DELTA, attr.y, attr.width, attr.height);
-                break;
             case DOWN:
                 XMoveResizeWindow(dpy, active, attr.x, attr.y + MOVE_DELTA, attr.width, attr.height);
-                break;
             case UP:
                 XMoveResizeWindow(dpy, active, attr.x, attr.y - MOVE_DELTA, attr.width, attr.height);
-                break;
             case RIGHT:
                 XMoveResizeWindow(dpy, active, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
-                break;
         }
     }
 }
@@ -106,7 +105,6 @@ int main(void)
     unsigned int ww, wh;
 
     if(!(dpy = XOpenDisplay(0x0))) return 1;
-
     lll("session");
     XSetErrorHandler(error_handler);
 
@@ -162,12 +160,12 @@ int main(void)
         }
         
         if (ev.type == FocusIn) {
-            lll("in");
+            //lll("in");
             active = ev.xfocus.window;
             XSetWindowBorder(dpy, ev.xfocus.window, ACTIVE_COLOR);
         }
         if (ev.type == FocusOut) {
-            lll("out");
+            //lll("out");
             XSetWindowBorder(dpy, ev.xfocus.window, INACTIVE_COLOR);
         }
 

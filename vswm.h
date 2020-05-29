@@ -3,7 +3,9 @@
 #define super (1<<6)
 #define shift (1<<0)
 
-enum direction {LEFT, DOWN, UP, RIGHT};
+enum {LEFT, DOWN, UP, RIGHT};
+enum {tall, wide};
+enum {inactive, active};
 
 typedef struct combos {
     int modifiers;
@@ -11,6 +13,20 @@ typedef struct combos {
     void (* function)(Display* dpy, XEvent ev, int arg);
     int arg; 
 } combo;
+
+typedef struct wins win;
+
+typedef struct wins {
+    Window window;
+    int x, y;
+    unsigned int w, h;
+    int a;
+    int size;
+    win* prev;
+    win* next;
+} win;
+
+win window_list[]; 
 
 void lll(char msg[]);
 void key_init();
