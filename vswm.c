@@ -52,7 +52,7 @@ void key_init(Display* dpy) {
 void close(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XSelectInput(dpy, active, NoEventMask);
-        XKillClient(dpy, active); 
+        XKillClient(dpy, active.win); 
         active = 0;
     }
 }
@@ -116,64 +116,9 @@ int main(void)
     start.subwindow = None;
     while(running) {
         XNextEvent(dpy, &ev);
-        if(ev.type == ConfigureRequest) {
-            lll("config");
-            XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &(XWindowChanges) {
-                                .x = ev.xconfigurerequest.x,
-                                .y = ev.xconfigurerequest.y,
-                                .width = ev.xconfigurerequest.width,
-                                .height = ev.xconfigurerequest.height,
-                                .border_width = BORDER_WIDTH
-                             });
-        }
-        if(ev.type == MapRequest) {
-            lll("map");
-            wx = wy = 0;
-            ww = wh = 0;
-            win_size(ev.xmaprequest.window, &wx, &wy, &ww, &wh);
-            XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
-            XMoveResizeWindow(dpy, ev.xmaprequest.window, wx, wy, ww, wh);
-            XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
-            XSetWindowBorder(dpy, ev.xmaprequest.window, INACTIVE_COLOR);
-            XMapWindow(dpy, ev.xmaprequest.window);
-            if (!active) { XSetInputFocus(dpy, ev.xmaprequest.window, RevertToParent, CurrentTime); }
-        }
 
-        if (ev.type == KeyPress) {
-            key_handler(dpy, ev);
-        }
+        event_handler(dpy, ev);
 
-        if (ev.type == EnterNotify) {
-            lll("enter");
-            XSetInputFocus(dpy, ev.xcrossing.window, RevertToParent, CurrentTime);
-        }
-        if (ev.type == DestroyNotify) {
-            lll("destroy");
-            XSelectInput(dpy, ev.xdestroywindow.window, NoEventMask);
-            active = 0;
-        }
-
-        if (ev.type == UnmapNotify) {
-            lll("unmap");
-            XSelectInput(dpy, ev.xunmap.window, NoEventMask);
-            XUnmapWindow(dpy, ev.xunmap.window);
-        }
-        
-        if (ev.type == FocusIn) {
-            //lll("in");
-            active = ev.xfocus.window;
-            XSetWindowBorder(dpy, ev.xfocus.window, ACTIVE_COLOR);
-        }
-        if (ev.type == FocusOut) {
-            //lll("out");
-            XSetWindowBorder(dpy, ev.xfocus.window, INACTIVE_COLOR);
-        }
-
-        if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
-            XRaiseWindow(dpy, ev.xbutton.subwindow);
-            XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
-            start = ev.xbutton;
-        }
         if(ev.type == MotionNotify && start.subwindow != None) {
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;

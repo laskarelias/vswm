@@ -14,6 +14,10 @@ typedef struct combos {
     int arg; 
 } combo;
 
+typedef struct events {
+    void (* function)(Display* dpy, XEvent ev);
+} event
+
 typedef struct wins win;
 
 typedef struct wins {
@@ -38,3 +42,4 @@ void close(Display* dpy, XEvent ev, int arg);
 void switch_window(Display* dpy, XEvent ev, int arg);
 void move(Display* dpy, XEvent ev, int arg);
 void logout(Display* dpy, XEvent ev, int arg);
+
