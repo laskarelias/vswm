@@ -50,11 +50,11 @@ void key_init(Display* dpy) {
 
 /* Functions */
 void close(Display* dpy, XEvent ev, int arg) {
-    if (active) {
-        XSelectInput(dpy, active, NoEventMask);
-        XKillClient(dpy, active.win); 
-        active = 0;
-    }
+//    if (active) {
+//        XSelectInput(dpy, active, NoEventMask);
+//        XKillClient(dpy, active.win); 
+//        active = 0;
+//    }
 }
 
 void maximize(Display* dpy, XEvent ev, int arg) {
@@ -80,18 +80,65 @@ void move(Display* dpy, XEvent ev, int arg) {
         switch(arg) {
             case LEFT:
                 XMoveResizeWindow(dpy, active, attr.x - MOVE_DELTA, attr.y, attr.width, attr.height);
+                break;
             case DOWN:
                 XMoveResizeWindow(dpy, active, attr.x, attr.y + MOVE_DELTA, attr.width, attr.height);
+                break;
             case UP:
                 XMoveResizeWindow(dpy, active, attr.x, attr.y - MOVE_DELTA, attr.width, attr.height);
+                break;
             case RIGHT:
                 XMoveResizeWindow(dpy, active, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
+                break;
         }
     }
 }
 
 void logout(Display* dpy, XEvent ev, int arg) {
     running = 0;
+}
+
+void event_handler(Display* dpy, XEvent ev) {
+    switch (ev.type) {
+        case ConfigureRequest:
+            XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &(XWindowChanges) {
+                .x = ev.xconfigurerequest.x,
+                .y = ev.xconfigurerequest.y,
+                .width = ev.xconfigurerequest.width,
+                .height = ev.xconfigurerequest.height,
+                .border_width = BORDER_WIDTH
+            });
+            break;
+        case MapRequest:
+            win_size(ev.xmaprequest.window, &wx, &wy, &ww, &wh);
+            XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
+            XMoveResizeWindow(dpy, ev.xmaprequest.window, wx, wy, ww, wh);
+            XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
+            XSetWindowBorder(dpy, ev.xmaprequest.window, INACTIVE_COLOR);
+            XMapWindow(dpy, ev.xmaprequest.window); 
+            break;
+        case KeyPress:
+            key_handler(dpy, ev);
+            break;
+        case EnterNotify:
+            XSetInputFocus(dpy, ev.xcrossing.window, RevertToParent, CurrentTime);
+            break;
+        case DestroyNotify:
+            XSelectInput(dpy, ev.xdestroywindow.window, NoEventMask);
+            break;
+        case UnmapNotify:
+            XSelectInput(dpy, ev.xunmap.window, NoEventMask);
+            XUnmapWindow(dpy, ev.xunmap.window);
+            break;
+        case FocusIn:
+            XSetWindowBorder(dpy, ev.xfocus.window, ACTIVE_COLOR);
+            break;
+        case FocusOut:
+            XSetWindowBorder(dpy, ev.xfocus.window, INACTIVE_COLOR);
+            break;
+        default:
+            break;
+    }
 }
 
 int main(void)
@@ -113,6 +160,7 @@ int main(void)
     XGrabButton(dpy, 3, Mod1Mask, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     key_init(dpy);
 
+    XDefineCursor(dpy, DefaultRootWindow(dpy), XCreateFontCursor(dpy, 68));
     start.subwindow = None;
     while(running) {
         XNextEvent(dpy, &ev);

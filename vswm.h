@@ -4,8 +4,8 @@
 #define shift (1<<0)
 
 enum {LEFT, DOWN, UP, RIGHT};
-enum {tall, wide};
 enum {inactive, active};
+enum {tall, wide};
 
 typedef struct combos {
     int modifiers;
@@ -13,10 +13,6 @@ typedef struct combos {
     void (* function)(Display* dpy, XEvent ev, int arg);
     int arg; 
 } combo;
-
-typedef struct events {
-    void (* function)(Display* dpy, XEvent ev);
-} event
 
 typedef struct wins win;
 
