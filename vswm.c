@@ -15,6 +15,8 @@
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
 
 static unsigned int running = 1;
+static win *win_list = {0};
+static win *active = {0};
 
 void lll(char msg[]){
     FILE * fp;
@@ -110,9 +112,10 @@ void event_handler(Display* dpy, XEvent ev) {
             });
             break;
         case MapRequest:
-            win_size(ev.xmaprequest.window, &wx, &wy, &ww, &wh);
+            //win_size(ev.xmaprequest.window, &wx, &wy, &ww, &wh);
             XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
-            XMoveResizeWindow(dpy, ev.xmaprequest.window, wx, wy, ww, wh);
+            //XMoveResizeWindow(dpy, ev.xmaprequest.window, wx, wy, ww, wh);
+            
             XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
             XSetWindowBorder(dpy, ev.xmaprequest.window, INACTIVE_COLOR);
             XMapWindow(dpy, ev.xmaprequest.window); 
@@ -122,6 +125,7 @@ void event_handler(Display* dpy, XEvent ev) {
             break;
         case EnterNotify:
             XSetInputFocus(dpy, ev.xcrossing.window, RevertToParent, CurrentTime);
+            active = ev.xcrossing.subwindow;
             break;
         case DestroyNotify:
             XSelectInput(dpy, ev.xdestroywindow.window, NoEventMask);

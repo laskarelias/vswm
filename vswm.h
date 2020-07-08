@@ -4,7 +4,6 @@
 #define shift (1<<0)
 
 enum {LEFT, DOWN, UP, RIGHT};
-enum {inactive, active};
 enum {tall, wide};
 
 typedef struct combos {
@@ -20,13 +19,10 @@ typedef struct wins {
     Window window;
     int x, y;
     unsigned int w, h;
-    int a;
     int size;
     win* prev;
     win* next;
 } win;
-
-win window_list[]; 
 
 void lll(char msg[]);
 void key_init();
