@@ -14,6 +14,8 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
 #define ALL_WINDOWS win *t = 0, *w = win_list; w && t != win_list->prev; t = w, w = w->next
+#define DISPLAY_WIDTH XDisplayWidth(dpy, DefaultScreen(dpy))
+#define DISPLAY_HEIGHT XDisplayHeight(dpy, DefaultScreen(dpy))
 static unsigned int running = 1;
 
 static win *win_list = {0};
@@ -73,18 +75,19 @@ void maximize(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XWindowAttributes attr;
         XGetWindowAttributes(dpy, active->window, &attr);
-        if (attr.width == XDisplayWidth(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH && attr.height == XDisplayHeight(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH) {
-            XMoveResizeWindow(dpy, active->window, XDisplayWidth(dpy, DefaultScreen(dpy)) / 3, XDisplayHeight(dpy, DefaultScreen(dpy)) / 3, (XDisplayWidth(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH) / 3, (XDisplayHeight(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH) / 3);
+        if (attr.width == DISPLAY_WIDTH - 2 * BORDER_WIDTH && attr.height == DISPLAY_HEIGHT - 2 * BORDER_WIDTH) {
+            XMoveResizeWindow(dpy, active->window, XDisplayWidth(dpy, DefaultScreen(dpy)) / 3, DISPLAY_HEIGHT / 3, (DISPLAY_WIDTH - 2 * BORDER_WIDTH) / 3, (DISPLAY_HEIGHT - 2 * BORDER_WIDTH) / 3);
         } else {
-            XMoveResizeWindow(dpy, active->window, 0, 0, XDisplayWidth(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH, XDisplayHeight(dpy, DefaultScreen(dpy)) - 2 * BORDER_WIDTH);
+            XMoveResizeWindow(dpy, active->window, 0, 0, DISPLAY_WIDTH - 2 * BORDER_WIDTH, DISPLAY_HEIGHT - 2 * BORDER_WIDTH);
         }
     }
 }
 
 void switch_window(Display* dpy, XEvent ev, int arg) {
-    XLowerWindow(dpy, active->window);
-    XRaiseWindow(dpy, active->next->window);
-    XSetInputFocus(dpy, active->prev->window, RevertToParent, CurrentTime);
+    if(active) {
+        XLowerWindow(dpy, active->window);
+        XSetInputFocus(dpy, active->next->window, RevertToParent, CurrentTime);
+    }
 }
 
 void move(Display* dpy, XEvent ev, int arg) {
@@ -103,7 +106,6 @@ void move(Display* dpy, XEvent ev, int arg) {
                 break;
             case RIGHT:
                 XMoveResizeWindow(dpy, active->window, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
-
                 break;
         }
     }
@@ -125,12 +127,31 @@ void event_handler(Display* dpy, XEvent ev) {
             });
             break;
         case MapRequest:
-            lll("maprequest");
             if (!(w = (win *) calloc(1, sizeof(win)))) { exit(1); }
-            win_size(ev.xmaprequest.window, &(w->x), &(w->y), &(w->w), &(w->h));
-            XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
-            XMoveResizeWindow(dpy, ev.xmaprequest.window, w->x, w->y, w->w, w->h);
             w->window = ev.xmaprequest.window;
+            //win_size(w->window, &(w->x), &(w->y), &(w->w), &(w->h));
+            if (!active) {
+                w->x = 0;
+                w->y = 0;
+                w->w = DISPLAY_WIDTH - 2 * BORDER_WIDTH;
+                w->h = DISPLAY_HEIGHT - 2 * BORDER_WIDTH;
+                if (w->w > w->h) { w->size = wide; }
+                else { w->size = tall; }
+            } else {
+                if (active->size == wide) {
+                    w->x = active->x + (active->w / 2);
+                    w->y = active->y;
+                    w->w = active->w / 2;
+                    w->h = active->h;
+                } else {
+                    w->x = active->x;
+                    w->y = active->y + (active->h / 2);
+                    w->w = active->w;
+                    w->h = active->h / 2;
+                }
+            }
+            XSelectInput(dpy, w->window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
+            XMoveResizeWindow(dpy, w->window, w->x, w->y, w->w, w->h);
             active = w;
             if (win_list) {
                 win_list->prev->next = w;
@@ -141,11 +162,11 @@ void event_handler(Display* dpy, XEvent ev) {
                 win_list = w;
                 win_list->prev = win_list->next = win_list;
             }
-            XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
-            XSetWindowBorder(dpy, ev.xmaprequest.window, INACTIVE_COLOR);
-            XMapWindow(dpy, ev.xmaprequest.window);
-            XRaiseWindow(dpy, ev.xmaprequest.window);
-            XSetInputFocus(dpy, ev.xmaprequest.window, RevertToParent, CurrentTime);
+            XSetWindowBorderWidth(dpy, w->window, BORDER_WIDTH);
+            XSetWindowBorder(dpy, w->window, INACTIVE_COLOR);
+            XMapWindow(dpy, w->window);
+            XRaiseWindow(dpy, w->window);
+            XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
             break;
         case KeyPress:
             key_handler(dpy, ev);
@@ -153,21 +174,17 @@ void event_handler(Display* dpy, XEvent ev) {
         case EnterNotify:
             for (ALL_WINDOWS) {
                 if (w->window == ev.xcrossing.window) {
-                    XSetInputFocus(dpy, ev.xcrossing.window, RevertToParent, CurrentTime);
+                    XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
                     active = w;
                 }
             }
             break;
         case DestroyNotify:
-            lll("destroy notify");
             for (ALL_WINDOWS) {
-                lll("loop");
                 if (w->window == ev.xdestroywindow.window) {
-                    lll("found!");
-                    XSelectInput(dpy, ev.xdestroywindow.window, NoEventMask);
+                    XSelectInput(dpy, w->window, NoEventMask);
                     if (!win_list || !w) { return; }
                     if (w->prev == w) { 
-                        lll("no_win");
                         win_list = 0; 
                         active = 0;
                         break;
@@ -204,7 +221,6 @@ int main(void)
 
     if(!(dpy = XOpenDisplay(0x0))) return 1;
 
-    lll("session");
     XSetErrorHandler(error_handler);
 
     XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
