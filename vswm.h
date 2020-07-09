@@ -34,4 +34,3 @@ void close(Display* dpy, XEvent ev, int arg);
 void switch_window(Display* dpy, XEvent ev, int arg);
 void move(Display* dpy, XEvent ev, int arg);
 void logout(Display* dpy, XEvent ev, int arg);
-
