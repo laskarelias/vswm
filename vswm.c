@@ -10,14 +10,15 @@
 #include <stdlib.h>
 
 #include "config.h"
-#include <X11/bitmaps/boxes>
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
 #define ALL_WINDOWS win *t = 0, *w = win_list; w && t != win_list->prev; t = w, w = w->next
 static unsigned int running = 1;
+
 static win *win_list = {0};
 static win *active = {0};
+
 
 void lll(char msg[]){
     FILE * fp;
@@ -28,12 +29,9 @@ void lll(char msg[]){
 
 int error_handler(Display* dpy, XErrorEvent* ev){
    lll("[ ERROR ]");
-   char err[48];
-   XGetErrorText(dpy, ev->error_code, err, 48);
-//   FILE * fp = fopen("log.txt", "a");
-//   fprintf(fp, "%s \n", ev->error_code);
-//   fclose(fp);
-   lll(err);
+   FILE * fp = fopen("log.txt", "a");
+   fprintf(fp, "%d \n", ev->error_code);
+   fclose(fp);
    return 0;
 }
 
@@ -105,6 +103,7 @@ void move(Display* dpy, XEvent ev, int arg) {
                 break;
             case RIGHT:
                 XMoveResizeWindow(dpy, active->window, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
+
                 break;
         }
     }
@@ -204,6 +203,7 @@ int main(void)
     static XEvent ev;
 
     if(!(dpy = XOpenDisplay(0x0))) return 1;
+
     lll("session");
     XSetErrorHandler(error_handler);
 

@@ -3,6 +3,7 @@
 #define ACTIVE_COLOR 0x008080
 #define INACTIVE_COLOR 0x808080
 #define BORDER_WIDTH 2
+
 #define MOVE_DELTA 20
 
 combo keys[] = {
