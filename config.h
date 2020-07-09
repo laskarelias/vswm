@@ -1,8 +1,9 @@
 #include "vswm.h"
 
-#define ACTIVE_COLOR 0xff0000
-#define INACTIVE_COLOR 0x000080
-#define BORDER_WIDTH 5
+#define ACTIVE_COLOR 0x008080
+#define INACTIVE_COLOR 0x808080
+#define BORDER_WIDTH 2
+
 #define MOVE_DELTA 20
 
 combo keys[] = {
