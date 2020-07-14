@@ -22,6 +22,8 @@ typedef struct wins {
     int size;
     win* prev;
     win* next;
+    Window t;
+    Window s;
 } win;
 
 void lll(char msg[]);

@@ -53,6 +53,8 @@ void key_init(Display* dpy) {
 void close(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XSelectInput(dpy, active->window, NoEventMask);
+        XUnmapWindow(dpy, active->s);
+        XKillClient(dpy, active->s);
         XKillClient(dpy, active->window); 
 //        active = 0;
 //      
@@ -103,7 +105,6 @@ void move(Display* dpy, XEvent ev, int arg) {
                 break;
             case RIGHT:
                 XMoveResizeWindow(dpy, active->window, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
-
                 break;
         }
     }
@@ -129,6 +130,7 @@ void event_handler(Display* dpy, XEvent ev) {
             if (!(w = (win *) calloc(1, sizeof(win)))) { exit(1); }
             win_size(ev.xmaprequest.window, &(w->x), &(w->y), &(w->w), &(w->h));
             XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
+            w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w, w->h, 0, SHADOW_COLOR, SHADOW_COLOR);
             XMoveResizeWindow(dpy, ev.xmaprequest.window, w->x, w->y, w->w, w->h);
             w->window = ev.xmaprequest.window;
             active = w;
@@ -143,6 +145,7 @@ void event_handler(Display* dpy, XEvent ev) {
             }
             XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
             XSetWindowBorder(dpy, ev.xmaprequest.window, INACTIVE_COLOR);
+            XMapWindow(dpy, w->s);
             XMapWindow(dpy, ev.xmaprequest.window);
             XRaiseWindow(dpy, ev.xmaprequest.window);
             XSetInputFocus(dpy, ev.xmaprequest.window, RevertToParent, CurrentTime);
@@ -221,14 +224,20 @@ int main(void)
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
             XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
             start = ev.xbutton;
+            active->window = start.subwindow;
         } else if (ev.type == MotionNotify && start.subwindow != None) {
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
-            XMoveResizeWindow(dpy, start.subwindow,
+            XMoveResizeWindow(dpy, active->window,
                 attr.x + (start.button==1 ? xdiff : 0),
                 attr.y + (start.button==1 ? ydiff : 0),
                 MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
                 MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
+            XMoveResizeWindow(dpy, active->s,
+                attr.x + (start.button==1 ? xdiff + SHADOW_X : 0),
+                attr.y + (start.button==1 ? ydiff + SHADOW_Y: 0),
+                MAX(1, attr.width + (start.button==3 ? xdiff + SHADOW_X: 0)),
+                MAX(1, attr.height + (start.button==3 ? ydiff + SHADOW_Y: 0)));
         }
         else if(ev.type == ButtonRelease)
             start.subwindow = None;
