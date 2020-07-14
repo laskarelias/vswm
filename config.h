@@ -2,15 +2,15 @@
 
 #define ACTIVE_COLOR 0x008080
 #define INACTIVE_COLOR 0x808080
-#define BORDER_WIDTH 5
-#define TITLEBAR_HEIGHT 20
+#define BORDER_WIDTH 2
+#define TITLEBAR_HEIGHT 10
 #define TITLEBAR_COLOR 0x008080
 
 #define MOVE_DELTA 20
 
-#define SHADOW_X 30
-#define SHADOW_Y 30
-#define SHADOW_COLOR 0x202020
+#define SHADOW_X 10
+#define SHADOW_Y 10
+#define SHADOW_COLOR 0x000000
 
 combo keys[] = {
     { super, "c",   close,         0     },

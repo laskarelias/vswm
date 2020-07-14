@@ -70,9 +70,7 @@ void close(Display* dpy, XEvent ev, int arg) {
         } else {
             if (active->next) { active->next->prev = active->prev; }
             if (active->prev) { active->prev->next = active->next; }
-            active = active->next;
-            XRaiseWindow(dpy, active->window);
-            XSetInputFocus(dpy, active->window, RevertToParent, CurrentTime);
+            switch_window(dpy, ev, arg);
         }
     }
 }
@@ -90,9 +88,11 @@ void maximize(Display* dpy, XEvent ev, int arg) {
 }
 
 void switch_window(Display* dpy, XEvent ev, int arg) {
-    XLowerWindow(dpy, active->window);
-    XRaiseWindow(dpy, active->next->window);
-    XSetInputFocus(dpy, active->prev->window, RevertToParent, CurrentTime);
+    active = active->next;
+    XRaiseWindow(dpy, active->s);
+    XRaiseWindow(dpy, active->t);
+    XRaiseWindow(dpy, active->window);
+    XSetInputFocus(dpy, active->window, RevertToParent, CurrentTime);
 }
 
 void move(Display* dpy, XEvent ev, int arg) {
@@ -175,7 +175,6 @@ void event_handler(Display* dpy, XEvent ev) {
         case DestroyNotify:
             for (ALL_WINDOWS) {
                 if (w->window == ev.xdestroywindow.window) {
-                    lll("found!");
                     XSelectInput(dpy, ev.xdestroywindow.window, NoEventMask);
 
                     XUnmapWindow(dpy, w->s);
@@ -187,7 +186,6 @@ void event_handler(Display* dpy, XEvent ev) {
         
                     if (!win_list || !w) { return; }
                     if (w->prev == w) { 
-                        lll("no_win");
                         win_list = 0; 
                         active = 0;
                         break;
@@ -195,7 +193,8 @@ void event_handler(Display* dpy, XEvent ev) {
                     if (win_list == w) { win_list = w->next; }
                     if (w->next) { w->next->prev = w->prev; }
                     if (w->prev) { w->prev->next = w->next; }
-                    active = w->prev;
+                    
+                    switch_window(dpy, ev, 0);
                     break;
                 }
             }
@@ -245,23 +244,29 @@ int main(void)
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
 
-            // active->x += (start.button == 1 ? xdiff : 0);
-            // active->y += (start.button == 1 ? ydiff : 0);
-            // active->w = MAX(1, active->w + (start.button == 3 ? xdiff : 0));
-            // active->h = MAX(1, active->h + (start.button == 3 ? ydiff : 0));
-
-            active->x += (start.button == 1 ? 1 : 0);
-            active->y += (start.button == 1 ? 1 : 0);
-            active->w = MAX(1, active->w + (start.button == 3 ? 1 : 0));
-            active->h = MAX(1, active->h + (start.button == 3 ? 1 : 0));
-            
-            XMoveResizeWindow(dpy, active->window, active->x, active->y, active->w, active->h);
-            XMoveResizeWindow(dpy, active->s, active->x + SHADOW_X, active->y + SHADOW_Y - TITLEBAR_HEIGHT, active->w, active->h + TITLEBAR_HEIGHT);
-            XMoveResizeWindow(dpy, active->t, active->x, active->y - TITLEBAR_HEIGHT, active->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT);
+            XMoveResizeWindow(dpy, active->window, 
+                active->x + (start.button == 1 ? xdiff : 0), 
+                active->y + (start.button == 1 ? ydiff : 0), 
+                MAX(1, active->w + (start.button == 3 ? xdiff : 0)), 
+                MAX(1, active->h + (start.button == 3 ? ydiff : 0)));
+            XMoveResizeWindow(dpy, active->s, 
+                active->x + SHADOW_X + (start.button == 1 ? xdiff : 0), 
+                active->y + SHADOW_Y - TITLEBAR_HEIGHT + (start.button == 1 ? ydiff : 0), 
+                MAX(1, active->w + (start.button == 3 ? xdiff : 0)), 
+                MAX(1, active->h + TITLEBAR_HEIGHT + (start.button == 3 ? ydiff : 0)));
+            XMoveResizeWindow(dpy, active->t, 
+                active->x + (start.button == 1 ? xdiff : 0), 
+                active->y - TITLEBAR_HEIGHT + (start.button == 1 ? ydiff : 0), 
+                MAX(1, active->w + BORDER_WIDTH * 2 + (start.button == 3 ? xdiff : 0)), 
+                TITLEBAR_HEIGHT);
 
         }
-        else if(ev.type == ButtonRelease)
+        else if(ev.type == ButtonRelease) {
             start.subwindow = None;
+            if (active) {
+                win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
+            }
+        }
     }
 }
 
