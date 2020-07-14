@@ -19,9 +19,6 @@ static unsigned int running = 1;
 static win* win_list = {0};
 static win* active = {0};
 
-void _draw_decorations(win* a) {}
-void _remove_decorations(win* a) {}
-
 void lll(char msg[]){
     FILE * fp;
     fp = fopen("log.txt", "a");
@@ -97,6 +94,7 @@ void switch_window(Display* dpy, XEvent ev, int arg) {
 
 void move(Display* dpy, XEvent ev, int arg) {
     if (active) {
+        XRaiseWindow(dpy, active->window);
         switch(arg) {
             case LEFT:
                 active->x -= MOVE_DELTA;
@@ -125,14 +123,30 @@ void event_handler(Display* dpy, XEvent ev) {
     win *w;
     switch (ev.type) {
         case ConfigureRequest:
+            lll("configure request");
             XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &(XWindowChanges) {
                 .x = ev.xconfigurerequest.x,
                 .y = ev.xconfigurerequest.y,
                 .width = ev.xconfigurerequest.width,
                 .height = ev.xconfigurerequest.height,
             });
+            for (ALL_WINDOWS) {
+                if (w->window == ev.xconfigurerequest.window) {
+                    w->x = ev.xconfigurerequest.x;
+                    w->y = ev.xconfigurerequest.y;
+                    w->w = ev.xconfigurerequest.width;
+                    w->h = ev.xconfigurerequest.height;
+
+                    //XMoveResizeWindow(dpy, w->window, w->x, w->y, w->w, w->h);
+                    XMoveResizeWindow(dpy, w->s, w->x + SHADOW_X, w->y + SHADOW_Y - TITLEBAR_HEIGHT, w->w, w->h + TITLEBAR_HEIGHT);
+                    XMoveResizeWindow(dpy, w->t, w->x, w->y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT); 
+                }
+            }
+
+            
             break;
         case MapRequest:
+            lll("map request");
             if (!(w = (win *) calloc(1, sizeof(win)))) { exit(1); }
             win_size(ev.xmaprequest.window, &(w->x), &(w->y), &(w->w), &(w->h));
             XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
@@ -176,7 +190,6 @@ void event_handler(Display* dpy, XEvent ev) {
             for (ALL_WINDOWS) {
                 if (w->window == ev.xdestroywindow.window) {
                     XSelectInput(dpy, ev.xdestroywindow.window, NoEventMask);
-
                     XUnmapWindow(dpy, w->s);
                     XDestroyWindow(dpy, w->s);
                     XUnmapWindow(dpy, w->t);
@@ -199,10 +212,10 @@ void event_handler(Display* dpy, XEvent ev) {
                 }
             }
             break;
-        // case UnmapNotify:
-        //     XSelectInput(dpy, ev.xunmap.window, NoEventMask);
-        //     XUnmapWindow(dpy, ev.xunmap.window);
-        //     break;
+        case UnmapNotify:
+            XSelectInput(dpy, ev.xunmap.window, NoEventMask);
+            XUnmapWindow(dpy, ev.xunmap.window);
+            break;
         case FocusIn:
             XSetWindowBorder(dpy, ev.xfocus.window, ACTIVE_COLOR);
             break;
@@ -239,7 +252,10 @@ int main(void)
 
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
             start = ev.xbutton;
-            active->window = start.subwindow;
+            XRaiseWindow(dpy, active->s);
+            XRaiseWindow(dpy, active->t);
+            XRaiseWindow(dpy, active->window);
+
         } else if (ev.type == MotionNotify && start.subwindow != None) {
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
