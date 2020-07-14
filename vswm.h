@@ -6,15 +6,19 @@
 enum {LEFT, DOWN, UP, RIGHT};
 enum {tall, wide};
 
+typedef struct Args {
+    int i;
+    const char** c;
+} arg;
+
 typedef struct combos {
     int modifiers;
     char key[8];
-    void (* function)(Display* dpy, XEvent ev, int arg);
-    int arg; 
+    void (* function)(Display* dpy, XEvent ev, arg a);
+    arg a; 
 } combo;
 
 typedef struct wins win;
-
 typedef struct wins {
     Window window;
     int x, y;
@@ -29,8 +33,10 @@ void key_init();
 void key_handler(Display* dpy, XEvent ev);
 void event_handler(Display* dpy, XEvent ev);
 
-void maximize(Display* dpy, XEvent ev, int arg);
-void close(Display* dpy, XEvent ev, int arg);
-void switch_window(Display* dpy, XEvent ev, int arg);
-void move(Display* dpy, XEvent ev, int arg);
-void logout(Display* dpy, XEvent ev, int arg);
+void run(Display* dpy, XEvent ev, arg a);
+void maximize(Display* dpy, XEvent ev, arg a);
+void close_win(Display* dpy, XEvent ev, arg a);
+void center(Display* dpy, XEvent ev, arg a);
+void switch_window(Display* dpy, XEvent ev, arg a);
+void move(Display* dpy, XEvent ev, arg a);
+void logout(Display* dpy, XEvent ev, arg a);

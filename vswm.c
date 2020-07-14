@@ -8,6 +8,9 @@
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 #include "config.h"
 
@@ -19,13 +22,24 @@ static unsigned int running = 1;
 static win *win_list = {0};
 static win *active = {0};
 
-
 void lll(char msg[]){
     FILE * fp;
     fp = fopen("log.txt", "a");
     fprintf(fp, "[%ld] - %s \n", CurrentTime, msg);
     fclose(fp);
 }
+
+void run(Display* dpy, XEvent ev, arg a) {
+    if (fork() == 0) {  
+        if (dpy) { close(ConnectionNumber(dpy)); }
+        lll(a.c[0]);
+        setsid();
+        execvp((char*)a.c[0], (char**)a.c);
+    }
+
+}
+
+
 
 int error_handler(Display* dpy, XErrorEvent* ev){
    lll("[ ERROR ]");
@@ -38,7 +52,7 @@ int error_handler(Display* dpy, XErrorEvent* ev){
 void key_handler(Display* dpy, XEvent ev) {
     for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
         if ( (keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode) ) {
-            keys[i].function(dpy, ev, keys[i].arg);
+            keys[i].function(dpy, ev, keys[i].a);
         }
     }
 }
@@ -50,7 +64,7 @@ void key_init(Display* dpy) {
 }
 
 /* Functions */
-void close(Display* dpy, XEvent ev, int arg) {
+void close_win(Display* dpy, XEvent ev, arg a) {
     if (active) {
         XSelectInput(dpy, active->window, NoEventMask);
         XKillClient(dpy, active->window); 
@@ -69,7 +83,7 @@ void close(Display* dpy, XEvent ev, int arg) {
     }
 }
 
-void maximize(Display* dpy, XEvent ev, int arg) {
+void maximize(Display* dpy, XEvent ev, arg a) {
     if (active) {
         XWindowAttributes attr;
         XGetWindowAttributes(dpy, active->window, &attr);
@@ -81,17 +95,18 @@ void maximize(Display* dpy, XEvent ev, int arg) {
     }
 }
 
-void switch_window(Display* dpy, XEvent ev, int arg) {
+void switch_window(Display* dpy, XEvent ev, arg a) {
     XLowerWindow(dpy, active->window);
-    XRaiseWindow(dpy, active->next->window);
-    XSetInputFocus(dpy, active->prev->window, RevertToParent, CurrentTime);
+    //XRaiseWindow(dpy, active->next->window);
+    active = active->prev;
+    XSetInputFocus(dpy, active->window, RevertToParent, CurrentTime);
 }
 
-void move(Display* dpy, XEvent ev, int arg) {
+void move(Display* dpy, XEvent ev, arg a) {
     if (active) {
         XWindowAttributes attr;
         XGetWindowAttributes(dpy, active->window, &attr);
-        switch(arg) {
+        switch(a.i) {
             case LEFT:
                 XMoveResizeWindow(dpy, active->window, attr.x - MOVE_DELTA, attr.y, attr.width, attr.height);
                 break;
@@ -103,16 +118,18 @@ void move(Display* dpy, XEvent ev, int arg) {
                 break;
             case RIGHT:
                 XMoveResizeWindow(dpy, active->window, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
-
                 break;
         }
     }
 }
 
-void logout(Display* dpy, XEvent ev, int arg) {
+void logout(Display* dpy, XEvent ev, arg a) {
     running = 0;
 }
 
+void center(Display* dpy, XEvent ev, arg a) {
+    XMoveResizeWindow(dpy, active->window, (XDisplayWidth(dpy, DefaultScreen(dpy)) - active->w) / 2, (XDisplayHeight(dpy, DefaultScreen(dpy)) - active->h) / 2, active->w, active->h);
+}
 void event_handler(Display* dpy, XEvent ev) {
     win *w;
     switch (ev.type) {
