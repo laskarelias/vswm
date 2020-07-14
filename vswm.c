@@ -19,6 +19,7 @@ static unsigned int running = 1;
 static win *win_list = {0};
 static win *active = {0};
 
+void _draw_decorations() {}
 
 void lll(char msg[]){
     FILE * fp;
@@ -54,7 +55,11 @@ void close(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XSelectInput(dpy, active->window, NoEventMask);
         XUnmapWindow(dpy, active->s);
-        XKillClient(dpy, active->s);
+        XDestroyWindow(dpy, active->s);
+        XUnmapWindow(dpy, active->t);
+        XDestroyWindow(dpy, active->t);
+        active->s = 0;
+        active->t = 0;
         XKillClient(dpy, active->window); 
 //        active = 0;
 //      
@@ -91,22 +96,23 @@ void switch_window(Display* dpy, XEvent ev, int arg) {
 
 void move(Display* dpy, XEvent ev, int arg) {
     if (active) {
-        XWindowAttributes attr;
-        XGetWindowAttributes(dpy, active->window, &attr);
         switch(arg) {
             case LEFT:
-                XMoveResizeWindow(dpy, active->window, attr.x - MOVE_DELTA, attr.y, attr.width, attr.height);
+                active->x -= MOVE_DELTA;
                 break;
             case DOWN:
-                XMoveResizeWindow(dpy, active->window, attr.x, attr.y + MOVE_DELTA, attr.width, attr.height);
+                active->y += MOVE_DELTA;
                 break;
             case UP:
-                XMoveResizeWindow(dpy, active->window, attr.x, attr.y - MOVE_DELTA, attr.width, attr.height);
+                active->y -= MOVE_DELTA;
                 break;
             case RIGHT:
-                XMoveResizeWindow(dpy, active->window, attr.x + MOVE_DELTA, attr.y, attr.width, attr.height);
+                active->x += MOVE_DELTA;
                 break;
         }
+        XMoveResizeWindow(dpy, active->window, active->x, active->y + TITLEBAR_HEIGHT, active->w, active->h);
+        XMoveResizeWindow(dpy, active->s, active->x + SHADOW_X, active->y + SHADOW_Y, active->w, active->h);
+        XMoveResizeWindow(dpy, active->t, active->x, active->y, active->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT);
     }
 }
 
@@ -130,8 +136,9 @@ void event_handler(Display* dpy, XEvent ev) {
             if (!(w = (win *) calloc(1, sizeof(win)))) { exit(1); }
             win_size(ev.xmaprequest.window, &(w->x), &(w->y), &(w->w), &(w->h));
             XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
-            w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w, w->h, 0, SHADOW_COLOR, SHADOW_COLOR);
-            XMoveResizeWindow(dpy, ev.xmaprequest.window, w->x, w->y, w->w, w->h);
+            w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w, w->h + TITLEBAR_HEIGHT, 0, SHADOW_COLOR, SHADOW_COLOR);
+            w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, TITLEBAR_COLOR, TITLEBAR_COLOR);
+            XMoveResizeWindow(dpy, ev.xmaprequest.window, w->x, w->y + TITLEBAR_HEIGHT, w->w, w->h);
             w->window = ev.xmaprequest.window;
             active = w;
             if (win_list) {
@@ -146,6 +153,9 @@ void event_handler(Display* dpy, XEvent ev) {
             XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
             XSetWindowBorder(dpy, ev.xmaprequest.window, INACTIVE_COLOR);
             XMapWindow(dpy, w->s);
+            XMapWindow(dpy, w->t);
+            XSelectInput(dpy, w->s, NoEventMask);
+            XSelectInput(dpy, w->t, NoEventMask);
             XMapWindow(dpy, ev.xmaprequest.window);
             XRaiseWindow(dpy, ev.xmaprequest.window);
             XSetInputFocus(dpy, ev.xmaprequest.window, RevertToParent, CurrentTime);
@@ -228,16 +238,23 @@ int main(void)
         } else if (ev.type == MotionNotify && start.subwindow != None) {
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
-            XMoveResizeWindow(dpy, active->window,
-                attr.x + (start.button==1 ? xdiff : 0),
-                attr.y + (start.button==1 ? ydiff : 0),
-                MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
-                MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
             XMoveResizeWindow(dpy, active->s,
                 attr.x + (start.button==1 ? xdiff + SHADOW_X : 0),
-                attr.y + (start.button==1 ? ydiff + SHADOW_Y: 0),
-                MAX(1, attr.width + (start.button==3 ? xdiff + SHADOW_X: 0)),
-                MAX(1, attr.height + (start.button==3 ? ydiff + SHADOW_Y: 0)));
+                attr.y + (start.button==1 ? ydiff + SHADOW_Y : 0),
+                MAX(1, attr.width + (start.button==3 ? xdiff + SHADOW_X : 0)),
+                MAX(1, attr.height + (start.button==3 ? ydiff + SHADOW_Y : 0)));
+
+            XMoveResizeWindow(dpy, active->t,
+                attr.x + (start.button==1 ? xdiff : 0),
+                attr.y + (start.button==1 ? ydiff - TITLEBAR_HEIGHT: 0),
+                MAX(1, attr.width + (start.button==3 ? xdiff + BORDER_WIDTH * 2 : BORDER_WIDTH * 2)),
+                TITLEBAR_HEIGHT);
+                
+            XMoveResizeWindow(dpy, active->window,
+                attr.x + (start.button==1 ? xdiff : 0),
+                attr.y + (start.button==1 ? ydiff - TITLEBAR_HEIGHT: 0),
+                MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
+                MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
         }
         else if(ev.type == ButtonRelease)
             start.subwindow = None;
