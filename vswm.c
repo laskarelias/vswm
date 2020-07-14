@@ -211,7 +211,6 @@ void event_handler(Display* dpy, XEvent ev) {
 int main(void)
 {
     static Display* dpy;
-    XWindowAttributes attr;
     XButtonEvent start;
     static XEvent ev;
 
@@ -231,30 +230,28 @@ int main(void)
         XNextEvent(dpy, &ev);
 
         event_handler(dpy, ev);
+
         if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
-            XGetWindowAttributes(dpy, ev.xbutton.subwindow, &attr);
             start = ev.xbutton;
             active->window = start.subwindow;
         } else if (ev.type == MotionNotify && start.subwindow != None) {
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
-            XMoveResizeWindow(dpy, active->s,
-                attr.x + (start.button==1 ? xdiff + SHADOW_X : 0),
-                attr.y + (start.button==1 ? ydiff + SHADOW_Y : 0),
-                MAX(1, attr.width + (start.button==3 ? xdiff + SHADOW_X : 0)),
-                MAX(1, attr.height + (start.button==3 ? ydiff + SHADOW_Y : 0)));
 
-            XMoveResizeWindow(dpy, active->t,
-                attr.x + (start.button==1 ? xdiff : 0),
-                attr.y + (start.button==1 ? ydiff - TITLEBAR_HEIGHT: 0),
-                MAX(1, attr.width + (start.button==3 ? xdiff + BORDER_WIDTH * 2 : BORDER_WIDTH * 2)),
-                TITLEBAR_HEIGHT);
-                
-            XMoveResizeWindow(dpy, active->window,
-                attr.x + (start.button==1 ? xdiff : 0),
-                attr.y + (start.button==1 ? ydiff - TITLEBAR_HEIGHT: 0),
-                MAX(1, attr.width + (start.button==3 ? xdiff : 0)),
-                MAX(1, attr.height + (start.button==3 ? ydiff : 0)));
+            // active->x += (start.button == 1 ? xdiff : 0);
+            // active->y += (start.button == 1 ? ydiff : 0);
+            // active->w = MAX(1, active->w + (start.button == 3 ? xdiff : 0));
+            // active->h = MAX(1, active->h + (start.button == 3 ? ydiff : 0));
+
+            active->x += (start.button == 1 ? 1 : 0);
+            active->y += (start.button == 1 ? 1 : 0);
+            active->w = MAX(1, active->w + (start.button == 3 ? 1 : 0));
+            active->h = MAX(1, active->h + (start.button == 3 ? 1 : 0));
+            
+            XMoveResizeWindow(dpy, active->window, active->x, active->y, active->w, active->h);
+            XMoveResizeWindow(dpy, active->s, active->x + SHADOW_X, active->y + SHADOW_Y - TITLEBAR_HEIGHT, active->w, active->h + TITLEBAR_HEIGHT);
+            XMoveResizeWindow(dpy, active->t, active->x, active->y - TITLEBAR_HEIGHT, active->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT);
+
         }
         else if(ev.type == ButtonRelease)
             start.subwindow = None;
