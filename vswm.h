@@ -5,6 +5,7 @@
 
 enum {LEFT, DOWN, UP, RIGHT};
 enum {tall, wide};
+enum {INACTIVE, ACTIVE};
 
 typedef struct combos {
     int modifiers;
