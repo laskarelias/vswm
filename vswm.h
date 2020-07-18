@@ -1,7 +1,7 @@
-#define ctrl (1<<2)
-#define alt (1<<3)
-#define super (1<<6)
-#define shift (1<<0)
+#define ctrl ControlMask
+#define alt Mod1Mask
+#define super Mod4Mask
+#define shift ShiftMask
 
 enum {LEFT, DOWN, UP, RIGHT};
 enum {tall, wide};

@@ -272,8 +272,8 @@ int main(void)
     XSetErrorHandler(error_handler);
 
     XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
-    XGrabButton(dpy, 1, Mod4Mask, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-    XGrabButton(dpy, 3, Mod4Mask, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    XGrabButton(dpy, 1, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    XGrabButton(dpy, 3, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     key_init(dpy);
 
     XDefineCursor(dpy, DefaultRootWindow(dpy), XCreateFontCursor(dpy, 68));
@@ -282,13 +282,11 @@ int main(void)
         XNextEvent(dpy, &ev);
 
         event_handler(dpy, ev);
-
-        if (ev.type == ButtonPress && ev.xbutton.subwindow != None) {
-            lll("button press");
+        if (ev.type == ButtonPress) {
             start = ev.xbutton;
-            XRaiseWindow(dpy, active->s);
-            XRaiseWindow(dpy, active->t);
-            XRaiseWindow(dpy, active->window);
+            if (ev.xbutton.subwindow == None && !(ev.xbutton.state & MOVE_KEY)) { 
+                start.subwindow = active->window;
+            } 
 
         } else if (ev.type == MotionNotify && start.subwindow != None) {
             int xdiff = ev.xbutton.x_root - start.x_root;

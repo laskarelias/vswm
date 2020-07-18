@@ -14,6 +14,8 @@
 #define SHADOW_Y 4
 #define SHADOW_COLOR 0x202020
 
+int MOVE_KEY = super;
+
 combo keys[] = {
     { super, "c",   close,         0     },
     { super, "m",   maximize,      0     },
