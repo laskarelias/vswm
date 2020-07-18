@@ -27,6 +27,9 @@ typedef struct wins {
     Window s;
 } win;
 
+void _focus(Display* dpy, win* w, int a);
+void _destroy_decorations(Display* dpy, win* w);
+
 void lll(char msg[]);
 void key_init();
 void key_handler(Display* dpy, XEvent ev);
@@ -37,3 +40,4 @@ void close(Display* dpy, XEvent ev, int arg);
 void switch_window(Display* dpy, XEvent ev, int arg);
 void move(Display* dpy, XEvent ev, int arg);
 void logout(Display* dpy, XEvent ev, int arg);
+

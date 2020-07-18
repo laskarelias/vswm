@@ -174,7 +174,7 @@ void event_handler(Display* dpy, XEvent ev) {
                     w->h = ev.xconfigurerequest.height;
 
                     //XMoveResizeWindow(dpy, w->window, w->x, w->y, w->w, w->h);
-                    XMoveResizeWindow(dpy, w->s, w->x + SHADOW_X, w->y + SHADOW_Y - TITLEBAR_HEIGHT, w->w, w->h + TITLEBAR_HEIGHT);
+                    XMoveResizeWindow(dpy, w->s, w->x + SHADOW_X, w->y + SHADOW_Y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, w->h + BORDER_WIDTH * 2 + TITLEBAR_HEIGHT);
                     XMoveResizeWindow(dpy, w->t, w->x, w->y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT); 
                 }
             }
@@ -237,8 +237,13 @@ void event_handler(Display* dpy, XEvent ev) {
             }
             break;
         case UnmapNotify:
-            XSelectInput(dpy, ev.xunmap.window, NoEventMask);
-            XUnmapWindow(dpy, ev.xunmap.window);
+            for (ALL_WINDOWS) {
+                if (w->window == ev.xunmap.window) {
+                    XSelectInput(dpy, w->window, NoEventMask);
+                    XUnmapWindow(dpy, w->window);
+                    _destroy_decorations(dpy, w);
+                }
+            }
             break;
         case FocusIn:
             for (ALL_WINDOWS) {
@@ -255,6 +260,10 @@ void event_handler(Display* dpy, XEvent ev) {
             }
             break;
         case ButtonPress:
+            break;
+        case ButtonRelease:
+            break;
+        case MotionNotify:
             break;
         default:
             break;
