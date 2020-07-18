@@ -64,12 +64,15 @@ void key_init(Display* dpy) {
 
 /* Helpers */ 
 void _focus(Display* dpy, win* w, int a) {
-    XSelectInput(dpy, w->t, NoEventMask);
-    XUnmapWindow(dpy, w->t);
-    XDestroyWindow(dpy, w->t);
-    XSetWindowBorder(dpy, w->window, (a ? BORDER_ACTIVE_COLOR : BORDER_INACTIVE_COLOR));
+    if (w->t) {
+        XSelectInput(dpy, w->t, NoEventMask);
+        XUnmapWindow(dpy, w->t);
+        XDestroyWindow(dpy, w->t);
+        
+    }
     w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR), (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
-    XSelectInput(dpy, w->t, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
+    XSelectInput(dpy, w->t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
+    XSetWindowBorder(dpy, w->window, (a ? BORDER_ACTIVE_COLOR : BORDER_INACTIVE_COLOR));
     w_arr[0] = w->window;
     w_arr[1] = w->t;
     w_arr[2] = w->s;
@@ -181,14 +184,11 @@ void event_handler(Display* dpy, XEvent ev) {
         case MapRequest:
             if (!(w = (win *) calloc(1, sizeof(win)))) { exit(1); }
             win_size(ev.xmaprequest.window, &(w->x), &(w->y), &(w->w), &(w->h));
-            XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
-            w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w + BORDER_WIDTH * 2, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2, 0, SHADOW_COLOR, SHADOW_COLOR);
-            w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, TITLEBAR_INACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
-            XSelectInput(dpy, w->s, EnterWindowMask);
-            XSelectInput(dpy, w->t, StructureNotifyMask | EnterWindowMask | FocusChangeMask | SubstructureNotifyMask);
-            XMoveResizeWindow(dpy, ev.xmaprequest.window, w->x, w->y + TITLEBAR_HEIGHT, w->w, w->h);
-            w->y += TITLEBAR_HEIGHT;
             w->window = ev.xmaprequest.window;
+            XSelectInput(dpy, w->window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
+            w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w + BORDER_WIDTH * 2, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2, 0, SHADOW_COLOR, SHADOW_COLOR);
+            XMoveResizeWindow(dpy, w->window, w->x, w->y + TITLEBAR_HEIGHT, w->w, w->h);
+            w->y += TITLEBAR_HEIGHT;
             active = w;
             if (win_list) {
                 win_list->prev->next = w;
@@ -199,29 +199,18 @@ void event_handler(Display* dpy, XEvent ev) {
                 win_list = w;
                 win_list->prev = win_list->next = win_list;
             }
-            XSetWindowBorderWidth(dpy, ev.xmaprequest.window, BORDER_WIDTH);
-            XSetWindowBorder(dpy, ev.xmaprequest.window, BORDER_INACTIVE_COLOR);
+            XSetWindowBorderWidth(dpy, w->window, BORDER_WIDTH);
             XMapWindow(dpy, w->s);
-            XMapWindow(dpy, w->t);
-            XMapWindow(dpy, ev.xmaprequest.window);
-            XRaiseWindow(dpy, ev.xmaprequest.window);
-            XSetInputFocus(dpy, ev.xmaprequest.window, RevertToParent, CurrentTime);
+            XMapWindow(dpy, w->window);
+            XRaiseWindow(dpy, w->window);
+            XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
             break;
         case KeyPress:
             key_handler(dpy, ev);
             break;
         case EnterNotify:
             for (ALL_WINDOWS) {
-                if (w->window == ev.xcrossing.window) {
-                    lll("enter notify on w->window");
-                    sprintf(i2msg, "%d", w->window);
-                    lll(i2msg);
-                    sprintf(i2msg, "%d", ev.xcrossing.window);
-                    lll("xcross:");
-                    lll(i2msg);
-                    sprintf(i2msg, "%d", w->t);
-                    lll("title:");
-                    lll(i2msg);
+                if (w->window == ev.xcrossing.window || w->t == ev.xcrossing.window) {
                     XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
                     active = w;
                 }
@@ -278,6 +267,7 @@ int main(void)
 
     if(!(dpy = XOpenDisplay(0x0))) return 1;
 
+    lll("===");
     lll("session");
     XSetErrorHandler(error_handler);
 
