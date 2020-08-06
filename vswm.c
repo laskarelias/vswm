@@ -63,10 +63,14 @@ void key_init(Display* dpy) {
 }
 
 /* Helpers */ 
+void _restack(Display* dpy, win* w) {
+    w_arr[0] = w->window;
+    w_arr[1] = w->t;
+    w_arr[2] = w->s;
+    XRestackWindows(dpy, w_arr, 3);
+}
+
 void _focus(Display* dpy, win* w, int a) {
-    // if (w->t) {
-    //     XSetWindowBackground(dpy, w->t, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
-    // }
     XSetWindowBorder(dpy, w->window, (a ? BORDER_ACTIVE_COLOR : BORDER_INACTIVE_COLOR));
     Window temp = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR), (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
     XSelectInput(dpy, w->t, NoEventMask);
@@ -75,10 +79,7 @@ void _focus(Display* dpy, win* w, int a) {
     XUnmapWindow(dpy, w->t);
     XDestroyWindow(dpy, w->t);
     w->t = temp;
-    w_arr[0] = w->window;
-    w_arr[1] = w->t;
-    w_arr[2] = w->s;
-    XRestackWindows(dpy, w_arr, 3);
+    _restack(dpy, w);
 }
 
 void _destroy_decorations(Display* dpy, win* w) {
@@ -300,6 +301,8 @@ int main(void)
         if (ev.type == ButtonPress) {
             start = ev.xbutton;
             if (ev.xbutton.subwindow == None && !(ev.xbutton.state & MOVE_KEY)) { 
+                XRaiseWindow(dpy, active->window);
+                _restack(dpy, active);
                 start.subwindow = active->window;
             } 
 
