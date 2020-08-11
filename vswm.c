@@ -94,6 +94,24 @@ void _destroy_decorations(Display* dpy, win* w) {
     w->t = 0;
  }
 
+void _move(Display* dpy, win* w, int btn, int dx, int dy) {
+            XMoveResizeWindow(dpy, w->window, 
+                w->x + (btn == 1 ? dx : 0), 
+                w->y + (btn == 1 ? dy : 0), 
+                MAX(1, w->w + (btn == 3 ? dx : 0)), 
+                MAX(1, w->h + (btn == 3 ? dy : 0)));
+            XMoveResizeWindow(dpy, w->s, 
+                w->x + SHADOW_X + (btn == 1 ? dx : 0), 
+                w->y + SHADOW_Y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0), 
+                MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)), 
+                MAX(1, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2 + (btn == 3 ? dy : 0)));
+            XMoveResizeWindow(dpy, w->t, 
+                w->x + (btn == 1 ? dx : 0), 
+                w->y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0), 
+                MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)), 
+                TITLEBAR_HEIGHT);
+}
+
 /* Keyboard - Mouse Functions */
 void close(Display* dpy, XEvent ev, int arg) {
     if (active) {
@@ -134,25 +152,27 @@ void switch_window(Display* dpy, XEvent ev, int arg) {
 void move(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XRaiseWindow(dpy, active->window);
+        _restack(dpy, active);
         switch(arg) {
             case LEFT:
-                active->x -= MOVE_DELTA;
+                _move(dpy, active, 1, -MOVE_DELTA, 0);
+                win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
                 break;
             case DOWN:
-                active->y += MOVE_DELTA;
+                _move(dpy, active, 1, 0, MOVE_DELTA);
+                win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
                 break;
             case UP:
-                active->y -= MOVE_DELTA;
+                _move(dpy, active, 1, 0, -MOVE_DELTA);
+                win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
                 break;
             case RIGHT:
-                active->x += MOVE_DELTA;
+                _move(dpy, active, 1, MOVE_DELTA, 0);
+                win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
                 break;
             default:
                 break;
         }
-        XMoveResizeWindow(dpy, active->window, active->x, active->y, active->w, active->h);
-        XMoveResizeWindow(dpy, active->s, active->x + SHADOW_X, active->y + SHADOW_Y - TITLEBAR_HEIGHT, active->w, active->h + TITLEBAR_HEIGHT);
-        XMoveResizeWindow(dpy, active->t, active->x, active->y - TITLEBAR_HEIGHT, active->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT);
     }
 }
 
@@ -193,6 +213,7 @@ void event_handler(Display* dpy, XEvent ev) {
             w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w + BORDER_WIDTH * 2, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2, 0, SHADOW_COLOR, SHADOW_COLOR);
             w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, TITLEBAR_INACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
             XSelectInput(dpy, w->t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
+            XSelectInput(dpy, w->s, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
             XMoveResizeWindow(dpy, w->window, w->x, w->y + TITLEBAR_HEIGHT, w->w, w->h);
             w->y += TITLEBAR_HEIGHT;
             active = w;
@@ -217,7 +238,7 @@ void event_handler(Display* dpy, XEvent ev) {
             break;
         case EnterNotify:
             for (ALL_WINDOWS) {
-                if (w->window == ev.xcrossing.window || w->t == ev.xcrossing.window) {
+                if (w->window == ev.xcrossing.window || w->t == ev.xcrossing.window || w->s == ev.xcrossing.window) {
                     XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
                     active = w;
                 }
@@ -305,33 +326,21 @@ int main(void)
                 _restack(dpy, active);
                 start.subwindow = active->window;
             } 
-
         } else if (ev.type == MotionNotify && start.subwindow != None) {
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
-
-            XMoveResizeWindow(dpy, active->window, 
-                active->x + (start.button == 1 ? xdiff : 0), 
-                active->y + (start.button == 1 ? ydiff : 0), 
-                MAX(1, active->w + (start.button == 3 ? xdiff : 0)), 
-                MAX(1, active->h + (start.button == 3 ? ydiff : 0)));
-            XMoveResizeWindow(dpy, active->s, 
-                active->x + SHADOW_X + (start.button == 1 ? xdiff : 0), 
-                active->y + SHADOW_Y - TITLEBAR_HEIGHT + (start.button == 1 ? ydiff : 0), 
-                MAX(1, active->w + BORDER_WIDTH * 2 + (start.button == 3 ? xdiff : 0)), 
-                MAX(1, active->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2 + (start.button == 3 ? ydiff : 0)));
-            XMoveResizeWindow(dpy, active->t, 
-                active->x + (start.button == 1 ? xdiff : 0), 
-                active->y - TITLEBAR_HEIGHT + (start.button == 1 ? ydiff : 0), 
-                MAX(1, active->w + BORDER_WIDTH * 2 + (start.button == 3 ? xdiff : 0)), 
-                TITLEBAR_HEIGHT);
-
-        }
-        else if(ev.type == ButtonRelease) {
-            start.subwindow = None;
-            if (active) {
-                win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
+            int btn = 0;
+            for (ALL_WINDOWS) {
+                if (w->s == ev.xbutton.window) {
+                    lll("shadow");
+                    if (start.button == 1) { btn = 3; }
+                    if (start.button == 3) { btn = 1; }
+                } else { btn = start.button; }
             }
+            _move(dpy, active, btn, xdiff, ydiff);
+        } else if(ev.type == ButtonRelease) {
+            start.subwindow = None;
+            if (active) { win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h)); }
         }
     }
 }
