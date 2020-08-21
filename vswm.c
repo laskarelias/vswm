@@ -95,21 +95,21 @@ void _destroy_decorations(Display* dpy, win* w) {
  }
 
 void _move(Display* dpy, win* w, int btn, int dx, int dy) {
-            XMoveResizeWindow(dpy, w->window, 
-                w->x + (btn == 1 ? dx : 0), 
-                w->y + (btn == 1 ? dy : 0), 
-                MAX(1, w->w + (btn == 3 ? dx : 0)), 
-                MAX(1, w->h + (btn == 3 ? dy : 0)));
-            XMoveResizeWindow(dpy, w->s, 
-                w->x + SHADOW_X + (btn == 1 ? dx : 0), 
-                w->y + SHADOW_Y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0), 
-                MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)), 
-                MAX(1, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2 + (btn == 3 ? dy : 0)));
-            XMoveResizeWindow(dpy, w->t, 
-                w->x + (btn == 1 ? dx : 0), 
-                w->y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0), 
-                MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)), 
-                TITLEBAR_HEIGHT);
+    XMoveResizeWindow(dpy, w->window, 
+        w->x + (btn == 1 ? dx : 0), 
+        w->y + (btn == 1 ? dy : 0), 
+        MAX(1, w->w + (btn == 3 ? dx : 0)), 
+        MAX(1, w->h + (btn == 3 ? dy : 0)));
+    XMoveResizeWindow(dpy, w->s, 
+        w->x + SHADOW_X + (btn == 1 ? dx : 0), 
+        w->y + SHADOW_Y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0), 
+        MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)), 
+        MAX(1, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2 + (btn == 3 ? dy : 0)));
+    XMoveResizeWindow(dpy, w->t, 
+        w->x + (btn == 1 ? dx : 0), 
+        w->y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0), 
+        MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)), 
+        TITLEBAR_HEIGHT);
 }
 
 /* Keyboard - Mouse Functions */
@@ -202,8 +202,6 @@ void event_handler(Display* dpy, XEvent ev) {
                     XMoveResizeWindow(dpy, w->t, w->x, w->y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT); 
                 }
             }
-
-            
             break;
         case MapRequest:
             if (!(w = (win *) calloc(1, sizeof(win)))) { exit(1); }
@@ -275,16 +273,12 @@ void event_handler(Display* dpy, XEvent ev) {
             break;
         case FocusIn:
             for (ALL_WINDOWS) {
-                if (w->window == ev.xfocus.window) {
-                    _focus(dpy, w, ACTIVE);
-                }
+                if (w->window == ev.xfocus.window) { _focus(dpy, w, ACTIVE); }
             }
             break;
         case FocusOut:
             for (ALL_WINDOWS) {
-                if (w->window == ev.xfocus.window) {
-                    _focus(dpy, w, INACTIVE);
-                }
+                if (w->window == ev.xfocus.window) { _focus(dpy, w, INACTIVE); }
             }
             break;
         case ButtonPress:
@@ -332,7 +326,6 @@ int main(void)
             int btn = 0;
             for (ALL_WINDOWS) {
                 if (w->s == ev.xbutton.window) {
-                    lll("shadow");
                     if (start.button == 1) { btn = 3; }
                     if (start.button == 3) { btn = 1; }
                 } else { btn = start.button; }
