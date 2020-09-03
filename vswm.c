@@ -16,6 +16,7 @@ __   _______      ___ __ ___
 #include <X11/Xlib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "config.h"
 
@@ -71,15 +72,32 @@ void _restack(Display* dpy, win* w) {
 }
 
 void _focus(Display* dpy, win* w, int a) {
+    lll("focus");
     XSetWindowBorder(dpy, w->window, (a ? BORDER_ACTIVE_COLOR : BORDER_INACTIVE_COLOR));
     Window temp = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR), (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
+    //XFreeGC(dpy, w->gc);
+    lll("0");
     XSelectInput(dpy, w->t, NoEventMask);
-    XSelectInput(dpy, temp, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
+    XSelectInput(dpy, temp, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
     XMapWindow(dpy, temp);
     XUnmapWindow(dpy, w->t);
     XDestroyWindow(dpy, w->t);
     w->t = temp;
+    w->title = tt;
     _restack(dpy, w);
+    lll("1");
+    w->gc = XCreateGC(dpy, w->t, 0, 0);
+    lll("2");
+    XSetBackground(dpy, w->gc, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
+    lll("3");
+    XSetForeground(dpy, w->gc, (a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR));
+    lll("4");
+
+    /* Load Font */
+    XSetFont(dpy, w->gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
+    lll("5");
+    _text(dpy, w);
+    lll("6");
 }
 
 void _destroy_decorations(Display* dpy, win* w) {
@@ -180,6 +198,23 @@ void logout(Display* dpy, XEvent ev, int arg) {
     running = 0;
 }
 
+void _text(Display* dpy, win* w) {
+    int x, y, d, asc, desc;
+    XCharStruct overall;
+    XFontStruct* f = XLoadQueryFont(dpy, "fixed");
+    lll("-1");
+    XTextExtents(f, w->title, strlen(w->title), &d, &asc, &desc, &overall);
+    lll("-2");
+    y = (TITLEBAR_HEIGHT + asc - desc) / 2;
+    lll("-3");
+    x = y;
+    lll("-4");
+    XClearWindow(dpy, w->t);
+    lll("-5");
+    XDrawString(dpy, w->t, w->gc, x, y, w->title, strlen(w->title));
+    lll("-6");
+}
+
 void event_handler(Display* dpy, XEvent ev) {
     win *w;
     switch (ev.type) {
@@ -209,8 +244,8 @@ void event_handler(Display* dpy, XEvent ev) {
             w->window = ev.xmaprequest.window;
             XSelectInput(dpy, w->window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
             w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w + BORDER_WIDTH * 2, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2, 0, SHADOW_COLOR, SHADOW_COLOR);
-            w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, TITLEBAR_INACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
-            XSelectInput(dpy, w->t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
+            w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, TITLEBAR_ACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
+            XSelectInput(dpy, w->t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
             XSelectInput(dpy, w->s, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
             XMoveResizeWindow(dpy, w->window, w->x, w->y + TITLEBAR_HEIGHT, w->w, w->h);
             w->y += TITLEBAR_HEIGHT;

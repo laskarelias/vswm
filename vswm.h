@@ -25,10 +25,13 @@ typedef struct wins {
     win* next;
     Window t;
     Window s;
+    char* title;
+    GC gc;
 } win;
 
 void _focus(Display* dpy, win* w, int a);
 void _destroy_decorations(Display* dpy, win* w);
+void _text(Display* dpy, win* w);
 
 void lll(char msg[]);
 void key_init();
