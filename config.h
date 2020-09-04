@@ -7,6 +7,7 @@
 #define TITLEBAR_HEIGHT 20
 #define TITLEBAR_ACTIVE_COLOR 0x008080
 #define TITLEBAR_INACTIVE_COLOR 0x404040
+#define TITLEBAR_DECORATION "/usr/include/X11/bitmaps/wide_weave"
 
 #define TEXT_FONT "fixed"
 #define TEXT_ACTIVE_COLOR 0xFFFFFF
