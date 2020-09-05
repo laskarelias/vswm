@@ -19,8 +19,6 @@
 #define SHADOW_Y 3
 #define SHADOW_COLOR 0x000000
 
-char tt[20] = "Title Bar Test";
-
 int MOVE_KEY = super;
 
 combo keys[] = {

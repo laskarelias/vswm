@@ -14,6 +14,7 @@ __   _______      ___ __ ___
 */
 
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,23 +76,14 @@ void _restack(Display* dpy, win* w) {
 void _focus(Display* dpy, win* w, int a) {
     XSetWindowBorder(dpy, w->window, (a ? BORDER_ACTIVE_COLOR : BORDER_INACTIVE_COLOR));
     Window temp = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR), (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
-    //XFreeGC(dpy, w->gc);
     XSelectInput(dpy, w->t, NoEventMask);
     XSelectInput(dpy, temp, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
     XMapWindow(dpy, temp);
     XUnmapWindow(dpy, w->t);
     XDestroyWindow(dpy, w->t);
     w->t = temp;
-    w->title = tt;
     _restack(dpy, w);
-    // XGCValues gcv;
-    // gcv.fill_style = FillTiled;
-    // gcv.tile = XCreateBitmapFromData(dpy, DefaultRootWindow(dpy), boxes_bits, boxes_width, boxes_height);
-    // XGCValues* gcvp = &gcv;
     w->gc = XCreateGC(dpy, w->t, 0, 0);
-    //XSetTile(dpy, w->gc, XCreateBitmapFromData(dpy, DefaultRootWindow(dpy), boxes_bits, boxes_width, boxes_height));
-    //XSetFillStyle(dpy, w->gc, FillTiled);
-    //XSetFillRule(dpy, w->gc, EvenOddRule);
     XSetBackground(dpy, w->gc, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
     XSetForeground(dpy, w->gc, (a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR));
 
@@ -104,13 +96,13 @@ void _destroy_decorations(Display* dpy, win* w) {
     XSelectInput(dpy, w->window, NoEventMask);
     XSelectInput(dpy, w->s, NoEventMask);
     XSelectInput(dpy, w->t, NoEventMask);
+    XFreeGC(dpy, w->gc);
     XUnmapWindow(dpy, w->s);
     XDestroyWindow(dpy, w->s);
     XUnmapWindow(dpy, w->t);
     XDestroyWindow(dpy, w->t);
     w->s = 0;
     w->t = 0;
-    w->gc = 0;
  }
 
 void _move(Display* dpy, win* w, int btn, int dx, int dy) {
@@ -130,6 +122,25 @@ void _move(Display* dpy, win* w, int btn, int dx, int dy) {
         MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)), 
         TITLEBAR_HEIGHT);
     _text(dpy, w);
+}
+
+void _text(Display* dpy, win* w) {
+    int x, y, d, asc, desc;
+    XCharStruct overall;
+    XTextProperty name;
+    XGetWMName(dpy, w->window, &name);
+    XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
+    y = (TITLEBAR_HEIGHT + asc - desc) / 2;
+    x = y;
+    XClearWindow(dpy, w->t);
+    Pixmap bt = XCreateBitmapFromData(dpy, w->t, boxes_bits, boxes_width, boxes_height);
+    Pixmap px = XCreatePixmap(dpy, w->t, boxes_width, boxes_height, CopyFromParent);
+    XCopyPlane(dpy, bt, px, w->gc, 0, 0, boxes_width, boxes_height, 0, 0, (unsigned long)1);
+    XSetWindowBackgroundPixmap(dpy, w->t, px);
+    XClearWindow(dpy, w->t);
+
+    //XFillRectangle(dpy, px, w->gc, 0, 0, w->w + 2 * BORDER_WIDTH, TITLEBAR_HEIGHT);
+    XDrawString(dpy, w->t, w->gc, x, y, (char *)name.value, strlen((char *)name.value));
 }
 
 /* Keyboard - Mouse Functions */
@@ -200,17 +211,6 @@ void logout(Display* dpy, XEvent ev, int arg) {
     running = 0;
 }
 
-void _text(Display* dpy, win* w) {
-    int x, y, d, asc, desc;
-    XCharStruct overall;
-    XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), w->title, strlen(w->title), &d, &asc, &desc, &overall);
-    y = (TITLEBAR_HEIGHT + asc - desc) / 2;
-    x = y;
-    XClearWindow(dpy, w->t);
-    //Pixmap px = XCreateBitmapFromData(dpy, DefaultRootWindow(dpy), boxes_bits, boxes_width, boxes_height);
-    //XFillRectangle(dpy, px, w->gc, 0, 0, w->w + 2 * BORDER_WIDTH, TITLEBAR_HEIGHT);
-    XDrawString(dpy, w->t, w->gc, x, y, w->title, strlen(w->title));
-}
 
 void event_handler(Display* dpy, XEvent ev) {
     win *w;
@@ -297,9 +297,19 @@ void event_handler(Display* dpy, XEvent ev) {
         case UnmapNotify:
             for (ALL_WINDOWS) {
                 if (w->window == ev.xunmap.window) {
-                    XSelectInput(dpy, w->window, NoEventMask);
-                    XUnmapWindow(dpy, w->window);
                     _destroy_decorations(dpy, w);
+                    if (!win_list || !w) { return; }
+                    if (w->prev == w) { 
+                        win_list = 0; 
+                        active = 0;
+                        break;
+                    }
+                    if (win_list == w) { win_list = w->next; }
+                    if (w->next) { w->next->prev = w->prev; }
+                    if (w->prev) { w->prev->next = w->next; }
+                    
+                    switch_window(dpy, ev, 0);
+                    break;
                 }
             }
             break;
@@ -316,7 +326,6 @@ void event_handler(Display* dpy, XEvent ev) {
         case Expose:
             for (ALL_WINDOWS) {
                 if (w->t == ev.xexpose.window) { 
-                    lll("exp");
                     if (w != active) { _text(dpy, w); }
                 }
             }
@@ -335,6 +344,11 @@ void event_handler(Display* dpy, XEvent ev) {
 int main(void)
 {
     if(!(dpy = XOpenDisplay(0x0))) return 1;
+    XTextProperty wm_name;
+    wm_name.value = "VSWM";
+    wm_name.nitems = 1;
+    
+    XSetWMName(dpy, DefaultRootWindow(dpy), &wm_name);
 
     lll("===");
     lll("session");

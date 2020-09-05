@@ -25,7 +25,6 @@ typedef struct wins {
     win* next;
     Window t;
     Window s;
-    char* title;
     GC gc;
 } win;
 
