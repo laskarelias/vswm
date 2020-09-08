@@ -31,6 +31,7 @@ typedef struct wins {
 void _focus(Display* dpy, win* w, int a);
 void _destroy_decorations(Display* dpy, win* w);
 void _text(Display* dpy, win* w);
+void _status(Display * dpy);
 
 void lll(char msg[]);
 void key_init();
