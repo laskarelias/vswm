@@ -15,6 +15,7 @@ __   _______      ___ __ ___
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -239,7 +240,7 @@ void event_handler(Display* dpy, XEvent ev) {
             if (!(w = (win *) calloc(1, sizeof(win)))) { exit(1); }
             win_size(ev.xmaprequest.window, &(w->x), &(w->y), &(w->w), &(w->h));
             w->window = ev.xmaprequest.window;
-            XSelectInput(dpy, w->window, StructureNotifyMask | EnterWindowMask | FocusChangeMask);
+            XSelectInput(dpy, w->window, StructureNotifyMask | EnterWindowMask | FocusChangeMask | PropertyChangeMask);
             w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w + BORDER_WIDTH * 2, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2, 0, SHADOW_COLOR, SHADOW_COLOR);
             //w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, TITLEBAR_ACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
             XSelectInput(dpy, w->t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
@@ -336,6 +337,20 @@ void event_handler(Display* dpy, XEvent ev) {
             break;
         case MotionNotify:
             break;
+	case PropertyNotify:
+	    if ((ev.xproperty.window == DefaultRootWindow(dpy)) && (ev.xproperty.atom == XA_WM_NAME)) {
+	    	break;
+	    }
+	    for (ALL_WINDOWS) {
+	    	if (w->window == ev.xproperty.window) {
+		    if (ev.xproperty.atom == XA_WM_NAME) {
+		    	_text(dpy, w);
+		    }	    
+		
+		    break;
+		}
+	    }
+	    break;
         default:
             break;
     }
