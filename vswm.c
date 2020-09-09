@@ -77,24 +77,12 @@ void _restack(Display* dpy, win* w) {
 
 void _focus(Display* dpy, win* w, int a) {
     if (DEBUG) { lll("\t_focus"); }
-
     XWindowAttributes xw;
     if (!(XGetWindowAttributes(dpy, w->window, &xw))) { return; }
     XSetWindowBorder(dpy, w->window, (a ? BORDER_ACTIVE_COLOR : BORDER_INACTIVE_COLOR));
-    Window temp = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR), (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
-    XSelectInput(dpy, w->t, NoEventMask);
-    XSelectInput(dpy, temp, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
-    XMapWindow(dpy, temp);
-    XUnmapWindow(dpy, w->t);
-    XDestroyWindow(dpy, w->t);
-    w->t = temp;
-    _restack(dpy, w);
-    w->gc = XCreateGC(dpy, w->t, 0, 0);
+    XSetWindowBackground(dpy, w->t, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
     XSetBackground(dpy, w->gc, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
     XSetForeground(dpy, w->gc, (a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR));
-
-    /* Load Font */
-    XSetFont(dpy, w->gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
     _text(dpy, w);
 }
 
@@ -141,7 +129,7 @@ void _text(Display* dpy, win* w) {
     XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
     y = (TITLEBAR_HEIGHT + asc - desc) / 2;
     x = y;
-    XClearWindow(dpy, w->t);
+//    XClearArea(dpy, w->t, 0, 0, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, True);
 //    Pixmap bt = XCreateBitmapFromData(dpy, w->t, boxes_bits, boxes_width, boxes_height);
 //    Pixmap px = XCreatePixmap(dpy, w->t, boxes_width, boxes_height, CopyFromParent);
 //    XCopyPlane(dpy, bt, px, w->gc, 0, 0, boxes_width, boxes_height, 0, 0, (unsigned long)1);
@@ -149,7 +137,9 @@ void _text(Display* dpy, win* w) {
 //    XClearWindow(dpy, w->t);
 
     //XFillRectangle(dpy, px, w->gc, 0, 0, w->w + 2 * BORDER_WIDTH, TITLEBAR_HEIGHT);
-    XDrawString(dpy, w->t, w->gc, x, y, (char *)name.value, strlen((char *)name.value));
+    XClearWindow(dpy, w->t);
+    //XDrawString(dpy, w->t, w->gc, x, y, (char *)name.value, strlen((char *)name.value));
+    XDrawImageString(dpy, w->t, w->gc, x, y, (char *)name.value, strlen((char *)name.value));
 }
 
 void _status(Display* dpy) {
@@ -267,7 +257,9 @@ void event_handler(Display* dpy, XEvent ev) {
             w->window = ev.xmaprequest.window;
             XSelectInput(dpy, w->window, StructureNotifyMask | EnterWindowMask | FocusChangeMask | PropertyChangeMask);
             w->s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x + SHADOW_X, w->y + SHADOW_Y, w->w + BORDER_WIDTH * 2, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2, 0, SHADOW_COLOR, SHADOW_COLOR);
-            w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, TITLEBAR_ACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
+            w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + BORDER_WIDTH * 2, TITLEBAR_HEIGHT, 0, TITLEBAR_INACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
+            w->gc = XCreateGC(dpy, w->t, 0, 0);
+            XSetFont(dpy, w->gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
             XSelectInput(dpy, w->t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
             XSelectInput(dpy, w->s, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
             XMoveResizeWindow(dpy, w->window, w->x, w->y + TITLEBAR_HEIGHT, w->w, w->h);
@@ -284,9 +276,9 @@ void event_handler(Display* dpy, XEvent ev) {
             }
             XSetWindowBorderWidth(dpy, w->window, BORDER_WIDTH);
             XMapWindow(dpy, w->s);
-            //XMapWindow(dpy, w->t);
+            XMapWindow(dpy, w->t);
             XMapWindow(dpy, w->window);
-            XRaiseWindow(dpy, w->window);
+            _restack(dpy, w);
             XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
             break;
         case KeyPress:
@@ -423,6 +415,7 @@ int main(void)
             if (ev.xbutton.subwindow == None && !(ev.xbutton.state & MOVE_KEY)) { 
                 XRaiseWindow(dpy, active->window);
                 _restack(dpy, active);
+                _text(dpy, active);
                 start.subwindow = active->window;
             } 
         } else if (ev.type == MotionNotify && start.subwindow != None) {
