@@ -68,10 +68,16 @@ void key_init(Display* dpy) {
 /* Helpers */ 
 void _restack(Display* dpy, win* w) {
     if (DEBUG) { lll("\t_restack"); }
-    w_arr[0] = w->window;
-    w_arr[1] = w->t;
-    w_arr[2] = w->s;
-    XRestackWindows(dpy, w_arr, 3);
+    if (TITLEBAR_HEIGHT) {
+        w_arr[0] = w->window;
+        w_arr[1] = w->t;
+        w_arr[2] = w->s;
+        XRestackWindows(dpy, w_arr, 3); 
+    } else {
+        w_arr[0] = w->window;
+        w_arr[1] = w->s;
+        XRestackWindows(dpy, w_arr, 2); 
+    }
 }
 
 void _focus(Display* dpy, win* w, int a) {
@@ -97,12 +103,6 @@ void _focus(Display* dpy, win* w, int a) {
         if (DEBUG) { lll("\tNO BITMAP"); }
         XSetWindowBackground(dpy, w->t, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR)); 
     }
-    //Pixmap bt = XCreateBitmapFromData(dpy, w->t, vlines3_bits, vlines3_width, vlines3_height);
-    //Pixmap px = XCreatePixmap(dpy, w->t, vlines3_width, vlines3_height, DefaultDepth(dpy, DefaultScreen(dpy)));
-    //XSetBackground(dpy, w->gc, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
-    //XSetForeground(dpy, w->gc, (a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR));
-    //XCopyPlane(dpy, bt, px, w->gc, 0, 0, vlines3_width, vlines3_height, 0, 0, 1);
-    //XSetWindowBackgroundPixmap(dpy, w->t, px);
     _text(dpy, w);
 }
 
@@ -148,24 +148,23 @@ void _text(Display* dpy, win* w) {
     XTextProperty name;
     XGCValues gcv;
     if (!(XGetWMName(dpy, w->window, &name))) { name.value = "?"; }
-    lll("GetWmName");
+    if (DEBUG) { lll("GetWmName"); }
     XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
-    y = (TITLEBAR_HEIGHT + asc - desc) / 2;
-    x = y;
+    y = ((TITLEBAR_HEIGHT + asc - desc - TITLEBAR_BORDER_WIDTH) / 2);
+    x = 3;
     XClearWindow(dpy, w->t);
     XGetGCValues(dpy, w->gc, GCBackground | GCForeground, &gcv);
     XSetForeground(dpy, w->gc, gcv.background);
     XFillRectangle(dpy, w->t, w->gc, x - 3, y - asc - 3, overall.width + 6, desc + asc + 6 );
     XSetForeground(dpy, w->gc, gcv.foreground);
     XDrawImageString(dpy, w->t, w->gc, x, y, (char *)name.value, strlen((char *)name.value));
-    lll("Draw");
 }
 
 void _status(Display* dpy) {
     int x, y, d, asc, desc;
     XCharStruct overall;
     XTextProperty name;
-    XGetWMName(dpy, DefaultRootWindow(dpy), &name);
+    if (!(XGetWMName(dpy, DefaultRootWindow(dpy), &name))) { name.value = ""; }
     XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
     y = (TITLEBAR_HEIGHT + asc - desc) / 2;
     x = y;
@@ -173,7 +172,7 @@ void _status(Display* dpy) {
     GC gc = XCreateGC(dpy, DefaultRootWindow(dpy), 0, 0);
     XSetFont(dpy, gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
     XSetBackground(dpy, gc, 0x000000);
-    XSetForeground(dpy, gc, 0xFFFFFF);
+    XSetForeground(dpy, gc, STATUS_TEXT_COLOR);
     XClearWindow(dpy, DefaultRootWindow(dpy));
     XDrawString(dpy, DefaultRootWindow(dpy), gc, x, y, (char *)name.value, strlen((char *)name.value));
     XFreeGC(dpy, gc);

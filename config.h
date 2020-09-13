@@ -6,13 +6,13 @@
 #define BORDER_ACTIVE_COLOR 0xaaaaaa
 #define BORDER_INACTIVE_COLOR 0x202020
 
-#define TITLEBAR_HEIGHT 19
-#define TITLEBAR_BORDER_WIDTH 2
+#define TITLEBAR_HEIGHT 21
 #define TITLEBAR_ACTIVE_COLOR 0xbbbbbb
 #define TITLEBAR_INACTIVE_COLOR 0x404040
+#define TITLEBAR_BORDER_WIDTH 2
 #define TITLEBAR_BORDER_ACTIVE_COLOR 0xaaaaaa
 #define TITLEBAR_BORDER_INACTIVE_COLOR 0x202020
-#define TITLEBAR_DECORATION "/usr/include/X11/bitmaps/wide_weave"
+#define TITLEBAR_DECORATION "/usr/include/X11/bitmaps/hlines2"
 
 #define TEXT_FONT "fixed"
 #define TEXT_ACTIVE_COLOR 0x101010
@@ -24,7 +24,6 @@
 #define SHADOW_X 3
 #define SHADOW_Y 3
 #define SHADOW_COLOR 0x000000
-
 
 int MOVE_KEY = super;
 
