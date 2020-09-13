@@ -21,7 +21,6 @@ __   _______      ___ __ ___
 #include <string.h>
 
 #include "config.h"
-#include <X11/bitmaps/hlines3>
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
@@ -78,16 +77,32 @@ void _restack(Display* dpy, win* w) {
 void _focus(Display* dpy, win* w, int a) {
     if (DEBUG) { lll("\t_focus"); }
     XWindowAttributes xw;
+    Pixmap bt;
+    unsigned int bt_w;
+    unsigned int bt_h;
+    int xh;
+    int yh;
     if (!(XGetWindowAttributes(dpy, w->window, &xw))) { return; }
     XSetWindowBorder(dpy, w->window, (a ? BORDER_ACTIVE_COLOR : BORDER_INACTIVE_COLOR));
     //XSetWindowBackground(dpy, w->t, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
     XSetWindowBorder(dpy, w->t, (a ? TITLEBAR_BORDER_ACTIVE_COLOR : TITLEBAR_BORDER_INACTIVE_COLOR));
-    Pixmap bt = XCreateBitmapFromData(dpy, w->t, hlines3_bits, hlines3_width, hlines3_height);
-    Pixmap px = XCreatePixmap(dpy, w->t, hlines3_width, hlines3_height, DefaultDepth(dpy, DefaultScreen(dpy)));
     XSetBackground(dpy, w->gc, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
     XSetForeground(dpy, w->gc, (a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR));
-    XCopyPlane(dpy, bt, px, w->gc, 0, 0, hlines3_width, hlines3_height, 0, 0, 1);
-    XSetWindowBackgroundPixmap(dpy, w->t, px);
+    if (XReadBitmapFile(dpy, w->t, TITLEBAR_DECORATION, &bt_w, &bt_h, &bt, &xh, &yh) == BitmapSuccess) { 
+        if (DEBUG) { lll("\tBITMAP"); }
+        Pixmap px = XCreatePixmap(dpy, w->t, bt_w, bt_h, DefaultDepth(dpy, DefaultScreen(dpy)));
+        XCopyPlane(dpy, bt, px, w->gc, 0, 0, bt_w, bt_h, 0, 0, 1);
+        XSetWindowBackgroundPixmap(dpy, w->t, px);
+    } else { 
+        if (DEBUG) { lll("\tNO BITMAP"); }
+        XSetWindowBackground(dpy, w->t, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR)); 
+    }
+    //Pixmap bt = XCreateBitmapFromData(dpy, w->t, vlines3_bits, vlines3_width, vlines3_height);
+    //Pixmap px = XCreatePixmap(dpy, w->t, vlines3_width, vlines3_height, DefaultDepth(dpy, DefaultScreen(dpy)));
+    //XSetBackground(dpy, w->gc, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
+    //XSetForeground(dpy, w->gc, (a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR));
+    //XCopyPlane(dpy, bt, px, w->gc, 0, 0, vlines3_width, vlines3_height, 0, 0, 1);
+    //XSetWindowBackgroundPixmap(dpy, w->t, px);
     _text(dpy, w);
 }
 
@@ -131,12 +146,17 @@ void _text(Display* dpy, win* w) {
     int x, y, d, asc, desc;
     XCharStruct overall;
     XTextProperty name;
+    XGCValues gcv;
     if (!(XGetWMName(dpy, w->window, &name))) { name.value = "?"; }
     lll("GetWmName");
     XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
     y = (TITLEBAR_HEIGHT + asc - desc) / 2;
     x = y;
     XClearWindow(dpy, w->t);
+    XGetGCValues(dpy, w->gc, GCBackground | GCForeground, &gcv);
+    XSetForeground(dpy, w->gc, gcv.background);
+    XFillRectangle(dpy, w->t, w->gc, x - 3, y - asc - 3, overall.width + 6, desc + asc + 6 );
+    XSetForeground(dpy, w->gc, gcv.foreground);
     XDrawImageString(dpy, w->t, w->gc, x, y, (char *)name.value, strlen((char *)name.value));
     lll("Draw");
 }
@@ -266,13 +286,13 @@ void event_handler(Display* dpy, XEvent ev) {
             //w->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + (BORDER_WIDTH * 2 - TITLEBAR_BORDER_WIDTH * 2), TITLEBAR_HEIGHT, TITLEBAR_BORDER_WIDTH, TITLEBAR_BORDER_INACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
             
             w->t = XCreateWindow(dpy, DefaultRootWindow(dpy), w->x, w->y, w->w + (BORDER_WIDTH * 2 - TITLEBAR_BORDER_WIDTH * 2), TITLEBAR_HEIGHT, TITLEBAR_BORDER_WIDTH, CopyFromParent, InputOutput, CopyFromParent, 0, &attr);
-            Pixmap bt = XCreateBitmapFromData(dpy, w->t, hlines3_bits, hlines3_width, hlines3_height);
+            //Pixmap bt = XCreateBitmapFromData(dpy, w->t, hlines3_bits, hlines3_width, hlines3_height);
             w->gc = XCreateGC(dpy, w->t, 0, 0);
-            Pixmap px = XCreatePixmap(dpy, w->t, hlines3_width, hlines3_height, DefaultDepth(dpy, DefaultScreen(dpy)));
-            XSetBackground(dpy, w->gc, TITLEBAR_INACTIVE_COLOR);
-            XSetForeground(dpy, w->gc, TEXT_INACTIVE_COLOR);
-            XCopyPlane(dpy, bt, px, w->gc, 0, 0, hlines3_width, hlines3_height, 0, 0, 1);
-            XSetWindowBackgroundPixmap(dpy, w->t, px);
+            //Pixmap px = XCreatePixmap(dpy, w->t, hlines3_width, hlines3_height, DefaultDepth(dpy, DefaultScreen(dpy)));
+            //XSetBackground(dpy, w->gc, TITLEBAR_INACTIVE_COLOR);
+            //XSetForeground(dpy, w->gc, TEXT_INACTIVE_COLOR);
+            //XCopyPlane(dpy, bt, px, w->gc, 0, 0, hlines3_width, hlines3_height, 0, 0, 1);
+            //XSetWindowBackgroundPixmap(dpy, w->t, px);
 
             XSetFont(dpy, w->gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
             XSelectInput(dpy, w->t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
