@@ -6,7 +6,7 @@
 #define BORDER_ACTIVE_COLOR 0xaaaaaa
 #define BORDER_INACTIVE_COLOR 0x202020
 
-#define TITLEBAR_HEIGHT 21
+#define TITLEBAR_HEIGHT 17
 #define TITLEBAR_ACTIVE_COLOR 0xbbbbbb
 #define TITLEBAR_INACTIVE_COLOR 0x404040
 #define TITLEBAR_BORDER_WIDTH 2
@@ -37,3 +37,7 @@ combo keys[] = {
     { super, "l",   move,          RIGHT },
     { super, "q",   logout,        0     },
 };
+
+// button titlebar[] = {
+//     {"/usr/inlcude/X11/bitmaps/xlogo11", close, 0},
+// };

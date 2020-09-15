@@ -118,7 +118,13 @@ void _destroy_decorations(Display* dpy, win* w) {
     XDestroyWindow(dpy, w->t);
     w->s = 0;
     w->t = 0;
- }
+}
+
+//void _button(Display* dpy, win* w, int x, int y, unsigned int width, unsigned int h, int i) {
+//    if (DEBUG) { lll("\t_button"); }
+//    Window temp = XCreateSimpleWindow(dpy, w->t, x, y, width, h, 1, 0x000000, 0xFFFFFF);
+//    XMapWindow(dpy, temp);
+//}
 
 void _move(Display* dpy, win* w, int btn, int dx, int dy) {
     if (DEBUG) { lll("\t_move"); }
@@ -158,6 +164,7 @@ void _text(Display* dpy, win* w) {
     XFillRectangle(dpy, w->t, w->gc, x - 3, y - asc - 3, overall.width + 6, desc + asc + 6 );
     XSetForeground(dpy, w->gc, gcv.foreground);
     XDrawImageString(dpy, w->t, w->gc, x, y, (char *)name.value, strlen((char *)name.value));
+//    _button(dpy, w, w->w - 16, 0, 16, 16, 0);
 }
 
 void _status(Display* dpy) {
@@ -209,10 +216,11 @@ void maximize(Display* dpy, XEvent ev, int arg) {
 }
 
 void switch_window(Display* dpy, XEvent ev, int arg) {
-    if  (active) {
-        active = active->prev;
-        _restack(dpy, active);
+    if (active) {
+        active = active->next;
+        XRaiseWindow(dpy, active->window);
         XSetInputFocus(dpy, active->window, RevertToParent, CurrentTime);
+        _restack(dpy, active);
     }
 }
 
