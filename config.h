@@ -1,5 +1,6 @@
 #include "vswm.h"
 
+
 #define DEBUG 1
 
 #define BORDER_WIDTH 2
@@ -36,6 +37,7 @@ combo keys[] = {
     { super, "k",   move,          UP    },
     { super, "l",   move,          RIGHT },
     { super, "q",   logout,        0     },
+
 };
 
 // button titlebar[] = {

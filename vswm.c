@@ -20,6 +20,8 @@ __   _______      ___ __ ___
 #include <stdlib.h>
 #include <string.h>
 
+
+
 #include "config.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -34,6 +36,7 @@ static Display* dpy;
 XButtonEvent start;
 static XEvent ev;
 
+
 char i2msg[12];
 
 void lll(char msg[]){
@@ -41,6 +44,16 @@ void lll(char msg[]){
     fp = fopen("log.txt", "a");
     fprintf(fp, "[%ld] - %s \n", CurrentTime, msg);
     fclose(fp);
+}
+
+void run(Display* dpy, XEvent ev, arg a) {
+    if (fork() == 0) {  
+        if (dpy) { close(ConnectionNumber(dpy)); }
+        lll(a.c[0]);
+        setsid();
+        execvp((char*)a.c[0], (char**)a.c);
+    }
+
 }
 
 int error_handler(Display* dpy, XErrorEvent* ev){
@@ -54,7 +67,7 @@ int error_handler(Display* dpy, XErrorEvent* ev){
 void key_handler(Display* dpy, XEvent ev) {
     for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
         if ( (keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode) ) {
-            keys[i].function(dpy, ev, keys[i].arg);
+            keys[i].function(dpy, ev, keys[i].a);
         }
     }
 }
@@ -187,6 +200,7 @@ void _status(Display* dpy) {
 
 /* Keyboard - Mouse Functions */
 void close(Display* dpy, XEvent ev, int arg) {
+
     if (active) {
         _destroy_decorations(dpy, active);
         XKillClient(dpy, active->window); 
@@ -202,7 +216,7 @@ void close(Display* dpy, XEvent ev, int arg) {
     }
 }
 
-void maximize(Display* dpy, XEvent ev, int arg) {
+void maximize(Display* dpy, XEvent ev, arg a) {
     if (active) {
         XWindowAttributes attr;
         XGetWindowAttributes(dpy, active->window, &attr);
@@ -215,6 +229,7 @@ void maximize(Display* dpy, XEvent ev, int arg) {
     }
 }
 
+
 void switch_window(Display* dpy, XEvent ev, int arg) {
     if (active) {
         active = active->next;
@@ -222,13 +237,16 @@ void switch_window(Display* dpy, XEvent ev, int arg) {
         XSetInputFocus(dpy, active->window, RevertToParent, CurrentTime);
         _restack(dpy, active);
     }
+
+
 }
 
-void move(Display* dpy, XEvent ev, int arg) {
+void move(Display* dpy, XEvent ev, arg a) {
     if (active) {
         XRaiseWindow(dpy, active->window);
         _restack(dpy, active);
         switch(arg) {
+
             case LEFT:
                 _move(dpy, active, 1, -MOVE_DELTA, 0);
                 win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
@@ -251,10 +269,13 @@ void move(Display* dpy, XEvent ev, int arg) {
     }
 }
 
-void logout(Display* dpy, XEvent ev, int arg) {
+void logout(Display* dpy, XEvent ev, arg a) {
     running = 0;
 }
 
+void center(Display* dpy, XEvent ev, arg a) {
+    XMoveResizeWindow(dpy, active->window, (XDisplayWidth(dpy, DefaultScreen(dpy)) - active->w) / 2, (XDisplayHeight(dpy, DefaultScreen(dpy)) - active->h) / 2, active->w, active->h);
+}
 
 void event_handler(Display* dpy, XEvent ev) {
     win *w;
@@ -409,20 +430,20 @@ void event_handler(Display* dpy, XEvent ev) {
             break;
         case MotionNotify:
             break;
-	case PropertyNotify:
-	    if ((ev.xproperty.window == DefaultRootWindow(dpy))) {
+	      case PropertyNotify:
+	          if ((ev.xproperty.window == DefaultRootWindow(dpy))) {
                 //lll("STATUS");
                 _status(dpy);
-	    	break;
-	    }
-	    for (ALL_WINDOWS) {
-	    	if (w->window == ev.xproperty.window) {
-                if (DEBUG) { lll("propertynot"); }
-                if (ev.xproperty.atom == XA_WM_NAME) { _text(dpy, w); }	    
-		    break;
-		}
-	    }
-	    break;
+	    	        break;
+	          }
+	          for (ALL_WINDOWS) {
+	    	        if (w->window == ev.xproperty.window) {
+                    if (DEBUG) { lll("propertynot"); }
+                    if (ev.xproperty.atom == XA_WM_NAME) { _text(dpy, w); }	    
+		                break;
+		            }
+	          }
+	          break;
         default:
             break;
     }

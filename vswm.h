@@ -7,11 +7,16 @@ enum {LEFT, DOWN, UP, RIGHT};
 enum {tall, wide};
 enum {INACTIVE, ACTIVE};
 
+typedef struct Args {
+    int i;
+    const char** c;
+} arg;
+
 typedef struct combos {
     int modifiers;
     char key[8];
-    void (* function)(Display* dpy, XEvent ev, int arg);
-    int arg; 
+    void (* function)(Display* dpy, XEvent ev, arg a);
+    arg a; 
 } combo;
 
 typedef struct buttons {
@@ -42,7 +47,6 @@ void _status(Display * dpy);
 // void _button(Display* dpy, win* w, int x, int y, unsigned int width, unsigned int h, int i);
 
 
-
 void lll(char msg[]);
 int  error_handler(Display* dpy, XErrorEvent* ev);
 void key_init();
@@ -51,7 +55,7 @@ void event_handler(Display* dpy, XEvent ev);
 
 void maximize(Display* dpy, XEvent ev, int arg);
 void close(Display* dpy, XEvent ev, int arg);
+void center(Display* dpy, XEvent ev, int arg);
 void switch_window(Display* dpy, XEvent ev, int arg);
 void move(Display* dpy, XEvent ev, int arg);
 void logout(Display* dpy, XEvent ev, int arg);
-
