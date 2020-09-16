@@ -1,25 +1,45 @@
 #include "vswm.h"
 
-#define ACTIVE_COLOR 0x800080
-#define INACTIVE_COLOR 0x808080
+
+#define DEBUG 1
+
 #define BORDER_WIDTH 2
+#define BORDER_ACTIVE_COLOR 0xaaaaaa
+#define BORDER_INACTIVE_COLOR 0x202020
+
+#define TITLEBAR_HEIGHT 17
+#define TITLEBAR_ACTIVE_COLOR 0xbbbbbb
+#define TITLEBAR_INACTIVE_COLOR 0x404040
+#define TITLEBAR_BORDER_WIDTH 2
+#define TITLEBAR_BORDER_ACTIVE_COLOR 0xaaaaaa
+#define TITLEBAR_BORDER_INACTIVE_COLOR 0x202020
+#define TITLEBAR_DECORATION "/usr/include/X11/bitmaps/hlines2"
+
+#define TEXT_FONT "fixed"
+#define TEXT_ACTIVE_COLOR 0x101010
+#define TEXT_INACTIVE_COLOR 0x606060
+#define STATUS_TEXT_COLOR 0xFFFFFF
 
 #define MOVE_DELTA 20
 
-const char* TERM[] = {"xterm", 0};
-const char* MENU[] = {"dmenu_run", 0};
+#define SHADOW_X 3
+#define SHADOW_Y 3
+#define SHADOW_COLOR 0x000000
+
+int MOVE_KEY = super;
 
 combo keys[] = {
-    { super, "x",   close_win,     {.i = 0     }},
-    { super, "c",   center,        {.i = 0     }},
-    { super, "m",   maximize,      {.i = 0     }},
-    { super, "Tab", switch_window, {.i = 0     }},
-    { super, "h",   move,          {.i = LEFT  }},
-    { super, "j",   move,          {.i = DOWN  }},
-    { super, "k",   move,          {.i = UP    }},
-    { super, "l",   move,          {.i = RIGHT }},
-    { super, "q",   logout,        {.i = 0     }},
-    { super, "Return",   run,           {.c = TERM  }},
-    { super, "a",   run,           {.c = MENU  }},
+    { super, "c",   close,         0     },
+    { super, "m",   maximize,      0     },
+    { super, "Tab", switch_window, 0     },
+    { super, "h",   move,          LEFT  },
+    { super, "j",   move,          DOWN  },
+    { super, "k",   move,          UP    },
+    { super, "l",   move,          RIGHT },
+    { super, "q",   logout,        0     },
 
 };
+
+// button titlebar[] = {
+//     {"/usr/inlcude/X11/bitmaps/xlogo11", close, 0},
+// };
