@@ -7,16 +7,12 @@ enum {LEFT, DOWN, UP, RIGHT};
 enum {tall, wide};
 enum {INACTIVE, ACTIVE};
 
-typedef struct Args {
-    int i;
-    const char** c;
-} arg;
 
 typedef struct combos {
     int modifiers;
     char key[8];
-    void (* function)(Display* dpy, XEvent ev, arg a);
-    arg a; 
+    void (* function)(Display* dpy, XEvent ev, int arg);
+    int arg; 
 } combo;
 
 typedef struct buttons {

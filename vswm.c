@@ -46,14 +46,14 @@ void lll(char msg[]){
     fclose(fp);
 }
 
-void run(Display* dpy, XEvent ev, arg a) {
-    if (fork() == 0) {  
-        if (dpy) { close(ConnectionNumber(dpy)); }
-        lll(a.c[0]);
-        setsid();
-        execvp((char*)a.c[0], (char**)a.c);
-    }
-
+// OLD
+void run(Display* dpy, XEvent ev, int arg) {
+    // if (fork() == 0) {  
+    //     if (dpy) { close(ConnectionNumber(dpy)); }
+    //     lll(a.c[0]);
+    //     setsid();
+    //     execvp((char*)a.c[0], (char**)a.c);
+    // }
 }
 
 int error_handler(Display* dpy, XErrorEvent* ev){
@@ -67,7 +67,7 @@ int error_handler(Display* dpy, XErrorEvent* ev){
 void key_handler(Display* dpy, XEvent ev) {
     for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
         if ( (keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode) ) {
-            keys[i].function(dpy, ev, keys[i].a);
+            keys[i].function(dpy, ev, keys[i].arg);
         }
     }
 }
@@ -216,7 +216,7 @@ void close(Display* dpy, XEvent ev, int arg) {
     }
 }
 
-void maximize(Display* dpy, XEvent ev, arg a) {
+void maximize(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XWindowAttributes attr;
         XGetWindowAttributes(dpy, active->window, &attr);
@@ -241,7 +241,7 @@ void switch_window(Display* dpy, XEvent ev, int arg) {
 
 }
 
-void move(Display* dpy, XEvent ev, arg a) {
+void move(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XRaiseWindow(dpy, active->window);
         _restack(dpy, active);
@@ -269,11 +269,11 @@ void move(Display* dpy, XEvent ev, arg a) {
     }
 }
 
-void logout(Display* dpy, XEvent ev, arg a) {
+void logout(Display* dpy, XEvent ev, int arg) {
     running = 0;
 }
 
-void center(Display* dpy, XEvent ev, arg a) {
+void center(Display* dpy, XEvent ev, int arg) {
     XMoveResizeWindow(dpy, active->window, (XDisplayWidth(dpy, DefaultScreen(dpy)) - active->w) / 2, (XDisplayHeight(dpy, DefaultScreen(dpy)) - active->h) / 2, active->w, active->h);
 }
 
