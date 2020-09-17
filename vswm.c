@@ -20,8 +20,6 @@ __   _______      ___ __ ___
 #include <stdlib.h>
 #include <string.h>
 
-
-
 #include "config.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -31,8 +29,11 @@ static unsigned int running = 1;
 
 static win* win_list = {0};
 static win* active = {0};
-static Window w_arr[3];
+static Window w_arr[5];
 static Display* dpy;
+static Window bar;
+static Window bar_s;
+static GC bar_gc;
 XButtonEvent start;
 static XEvent ev;
 
@@ -81,15 +82,35 @@ void key_init(Display* dpy) {
 /* Helpers */ 
 void _restack(Display* dpy, win* w) {
     if (DEBUG) { lll("\t_restack"); }
+    if (BAR_HEIGHT) {
+        if (TITLEBAR_HEIGHT) {
+            w_arr[0] = bar;
+            w_arr[1] = bar_s;
+            w_arr[2] = w->window;
+            w_arr[3] = w->t;
+            w_arr[4] = w->s;
+            XRestackWindows(dpy, w_arr, 5);
+            return;
+        } else {
+            w_arr[0] = bar;
+            w_arr[1] = bar_s;
+            w_arr[2] = w->window;
+            w_arr[3] = w->s;
+            XRestackWindows(dpy, w_arr, 4); 
+            return;
+        }
+    }
     if (TITLEBAR_HEIGHT) {
         w_arr[0] = w->window;
         w_arr[1] = w->t;
         w_arr[2] = w->s;
-        XRestackWindows(dpy, w_arr, 3); 
+        XRestackWindows(dpy, w_arr, 3);
+        return;
     } else {
         w_arr[0] = w->window;
         w_arr[1] = w->s;
-        XRestackWindows(dpy, w_arr, 2); 
+        XRestackWindows(dpy, w_arr, 2);
+        return;
     }
 }
 
@@ -180,27 +201,75 @@ void _text(Display* dpy, win* w) {
 //    _button(dpy, w, w->w - 16, 0, 16, 16, 0);
 }
 
+// OLD STATUS ON ROOT WINDOW
+// void _status(Display* dpy) {
+//     int x, y, d, asc, desc;
+//     XCharStruct overall;
+//     XTextProperty name;
+//     if (!(XGetWMName(dpy, DefaultRootWindow(dpy), &name))) { name.value = ""; }
+//     XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
+//     y = (TITLEBAR_HEIGHT + asc - desc) / 2;
+//     x = y;
+    
+//     GC gc = XCreateGC(dpy, DefaultRootWindow(dpy), 0, 0);
+//     XSetFont(dpy, gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
+//     XSetBackground(dpy, gc, 0x000000);
+//     XSetForeground(dpy, gc, STATUS_TEXT_COLOR);
+//     XClearWindow(dpy, DefaultRootWindow(dpy));
+//     XDrawString(dpy, DefaultRootWindow(dpy), gc, x, y, (char *)name.value, strlen((char *)name.value));
+//     XFreeGC(dpy, gc);
+// }
 void _status(Display* dpy) {
     int x, y, d, asc, desc;
     XCharStruct overall;
     XTextProperty name;
-    if (!(XGetWMName(dpy, DefaultRootWindow(dpy), &name))) { name.value = ""; }
+    XGCValues gcv;
+    if (!(XGetWMName(dpy, DefaultRootWindow(dpy), &name))) { name.value = "V S W M"; }
     XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
-    y = (TITLEBAR_HEIGHT + asc - desc) / 2;
-    x = y;
-    
-    GC gc = XCreateGC(dpy, DefaultRootWindow(dpy), 0, 0);
-    XSetFont(dpy, gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
-    XSetBackground(dpy, gc, 0x000000);
-    XSetForeground(dpy, gc, STATUS_TEXT_COLOR);
-    XClearWindow(dpy, DefaultRootWindow(dpy));
-    XDrawString(dpy, DefaultRootWindow(dpy), gc, x, y, (char *)name.value, strlen((char *)name.value));
-    XFreeGC(dpy, gc);
+    y = (BAR_HEIGHT + asc - desc) / 2;
+    x = 3;
+    XClearWindow(dpy, bar);
+    XGetGCValues(dpy, bar_gc, GCBackground | GCForeground, &gcv);
+    XSetForeground(dpy, bar_gc, gcv.background);
+    XFillRectangle(dpy, bar, bar_gc, x - 3, y - asc - 3, overall.width + 6, desc + asc + 6 );
+    XSetForeground(dpy, bar_gc, gcv.foreground);
+    XDrawImageString(dpy, bar, bar_gc, x, y, (char *)name.value, strlen((char *)name.value));
+}
+
+void _create_bar(Display* dpy) {
+    XWindowAttributes attr;
+    XSetWindowAttributes xw;
+    bar = XCreateWindow(dpy, DefaultRootWindow(dpy), 0, 0, WidthOfScreen(DefaultScreenOfDisplay(dpy)) - 2 * BAR_BORDER_WIDTH, BAR_HEIGHT, BAR_BORDER_WIDTH, CopyFromParent, InputOutput, CopyFromParent, 0, &xw);
+    Pixmap bt;
+    unsigned int bt_w;
+    unsigned int bt_h;
+    int xh;
+    int yh;
+    if (!(XGetWindowAttributes(dpy, bar, &attr))) { return; }
+    else {
+        bar_gc = XCreateGC(dpy, bar, 0, 0); 
+        bar_s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, BAR_HEIGHT + 2 * BAR_BORDER_WIDTH, WidthOfScreen(DefaultScreenOfDisplay(dpy)), BAR_SHADOW_Y, 0, 0, BAR_SHADOW); 
+    }
+    XSetWindowBorder(dpy, bar, BAR_BORDER);
+    XSetBackground(dpy, bar_gc, BAR_BACKGROUND);
+    XSetForeground(dpy, bar_gc, BAR_TEXT);
+    XSetFont(dpy, bar_gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
+    if (XReadBitmapFile(dpy, bar, BAR_DECORATION, &bt_w, &bt_h, &bt, &xh, &yh) == BitmapSuccess) { 
+        if (DEBUG) { lll("\tBITMAP_BAR"); }
+        Pixmap px = XCreatePixmap(dpy, bar, bt_w, bt_h, DefaultDepth(dpy, DefaultScreen(dpy)));
+        XCopyPlane(dpy, bt, px, bar_gc, 0, 0, bt_w, bt_h, 0, 0, 1);
+        XSetWindowBackgroundPixmap(dpy, bar, px);
+    } else { 
+        if (DEBUG) { lll("\tNO BITMAP_BAR"); }
+        XSetWindowBackground(dpy, bar, BAR_BACKGROUND); 
+    }
+    XMapWindow(dpy, bar_s);
+    XMapWindow(dpy, bar);
+    _status(dpy);
 }
 
 /* Keyboard - Mouse Functions */
 void close(Display* dpy, XEvent ev, int arg) {
-
     if (active) {
         _destroy_decorations(dpy, active);
         XKillClient(dpy, active->window); 
@@ -212,7 +281,6 @@ void close(Display* dpy, XEvent ev, int arg) {
             if (active->prev) { active->prev->next = active->next; }
             switch_window(dpy, ev, arg);
         }
-        _status(dpy);
     }
 }
 
@@ -224,7 +292,7 @@ void maximize(Display* dpy, XEvent ev, int arg) {
             XMoveResizeWindow(dpy, active->window, active->x, active->y, active->w, active->h);
         } else {
             XMoveResizeWindow(dpy, active->window, -BORDER_WIDTH, -BORDER_WIDTH, XDisplayWidth(dpy, DefaultScreen(dpy)), XDisplayHeight(dpy, DefaultScreen(dpy)));
-            _status(dpy);
+            if ( BAR_HEIGHT ) {_status(dpy); }
         }
     }
 }
@@ -237,8 +305,6 @@ void switch_window(Display* dpy, XEvent ev, int arg) {
         XSetInputFocus(dpy, active->window, RevertToParent, CurrentTime);
         _restack(dpy, active);
     }
-
-
 }
 
 void move(Display* dpy, XEvent ev, int arg) {
@@ -246,7 +312,6 @@ void move(Display* dpy, XEvent ev, int arg) {
         XRaiseWindow(dpy, active->window);
         _restack(dpy, active);
         switch(arg) {
-
             case LEFT:
                 _move(dpy, active, 1, -MOVE_DELTA, 0);
                 win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
@@ -325,8 +390,8 @@ void event_handler(Display* dpy, XEvent ev) {
             XSetFont(dpy, w->gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
             XSelectInput(dpy, w->t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
             XSelectInput(dpy, w->s, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
-            XMoveResizeWindow(dpy, w->window, w->x, w->y + TITLEBAR_HEIGHT, w->w, w->h);
-            w->y += TITLEBAR_HEIGHT;
+            XMoveResizeWindow(dpy, w->window, w->x, w->y + TITLEBAR_HEIGHT + BAR_HEIGHT + (2 * BAR_BORDER_WIDTH) + BAR_SHADOW_Y, w->w, w->h);
+            w->y += TITLEBAR_HEIGHT + BAR_HEIGHT + (2 * BAR_BORDER_WIDTH) + BAR_SHADOW_Y;
             active = w;
             if (win_list) {
                 win_list->prev->next = w;
@@ -382,8 +447,6 @@ void event_handler(Display* dpy, XEvent ev) {
             for (ALL_WINDOWS) {
                 if (w->window == ev.xunmap.window) {
                     XUnmapWindow(dpy, w->window);
-                    XUnmapWindow(dpy, w->t);
-                    XUnmapWindow(dpy, w->s);
                     _destroy_decorations(dpy, w);
                     if (!win_list || !w) { return; }
                     if (w->prev == w) { 
@@ -430,20 +493,20 @@ void event_handler(Display* dpy, XEvent ev) {
             break;
         case MotionNotify:
             break;
-	      case PropertyNotify:
-	          if ((ev.xproperty.window == DefaultRootWindow(dpy))) {
+        case PropertyNotify:
+            if ((ev.xproperty.window == DefaultRootWindow(dpy))) {
                 //lll("STATUS");
-                _status(dpy);
-	    	        break;
-	          }
-	          for (ALL_WINDOWS) {
-	    	        if (w->window == ev.xproperty.window) {
+                if (BAR_HEIGHT) { _status(dpy); }
+                break;
+            }
+            for (ALL_WINDOWS) {
+                if (w->window == ev.xproperty.window) {
                     if (DEBUG) { lll("propertynot"); }
                     if (ev.xproperty.atom == XA_WM_NAME) { _text(dpy, w); }	    
-		                break;
-		            }
-	          }
-	          break;
+                    break;
+                }
+            }
+            break;
         default:
             break;
     }
@@ -469,11 +532,14 @@ int main(void)
 
     XDefineCursor(dpy, DefaultRootWindow(dpy), XCreateFontCursor(dpy, 68));
     start.subwindow = None;
+
+    _create_bar(dpy);
     while(running) {
         XNextEvent(dpy, &ev);
 
         event_handler(dpy, ev);
         if (ev.type == ButtonPress) {
+            if (ev.xbutton.window == bar || ev.xbutton.window == bar_s) { break; }
             start = ev.xbutton;
             if (ev.xbutton.subwindow == None && !(ev.xbutton.state & MOVE_KEY)) { 
                 XRaiseWindow(dpy, active->window);
