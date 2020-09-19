@@ -39,7 +39,7 @@ void _focus(Display* dpy, win* w, int a);
 void _destroy_decorations(Display* dpy, win* w);
 void _move(Display* dpy, win* w, int btn, int dx, int dy);
 void _text(Display* dpy, win* w);
-void _status(Display * dpy);
+int  _status(Display* dpy);
 // void _button(Display* dpy, win* w, int x, int y, unsigned int width, unsigned int h, int i);
 
 
