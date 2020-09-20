@@ -24,7 +24,10 @@ __   _______      ___ __ ___
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
-#define ALL_WINDOWS win *t = 0, *w = win_list; w && t != win_list->prev; t = w, w = w->next
+#define ALL_WINDOWS            \
+    win* t = 0, *w = win_list; \
+    w && t != win_list->prev;  \
+    t = w, w = w->next
 static unsigned int running = 1;
 
 static win* win_list = {0};
@@ -37,11 +40,10 @@ static GC bar_gc;
 XButtonEvent start;
 static XEvent ev;
 
-
 char i2msg[12];
 
-void lll(char msg[]){
-    FILE * fp;
+void lll(char msg[]) {
+    FILE* fp;
     fp = fopen("log.txt", "a");
     fprintf(fp, "[%ld] - %s \n", CurrentTime, msg);
     fclose(fp);
@@ -49,7 +51,7 @@ void lll(char msg[]){
 
 // OLD
 void run(Display* dpy, XEvent ev, int arg) {
-    // if (fork() == 0) {  
+    // if (fork() == 0) {
     //     if (dpy) { close(ConnectionNumber(dpy)); }
     //     lll(a.c[0]);
     //     setsid();
@@ -57,29 +59,25 @@ void run(Display* dpy, XEvent ev, int arg) {
     // }
 }
 
-int error_handler(Display* dpy, XErrorEvent* ev){
-   //lll("[ ERROR ]");
-   //FILE * fp = fopen("log.txt", "a");
-   //fprintf(fp, "%d \n", ev->error_code);
-   //fclose(fp);
-   return 0;
+int error_handler(Display* dpy, XErrorEvent* ev) {
+    //lll("[ ERROR ]");
+    //FILE * fp = fopen("log.txt", "a");
+    //fprintf(fp, "%d \n", ev->error_code);
+    //fclose(fp);
+    return 0;
 }
 
 void key_handler(Display* dpy, XEvent ev) {
-    for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
-        if ( (keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode) ) {
-            keys[i].function(dpy, ev, keys[i].arg);
-        }
+    for (int i = 0; i < sizeof(keys) / sizeof(*keys); i++) {
+        if ((keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode)) { keys[i].function(dpy, ev, keys[i].arg); }
     }
 }
 
 void key_init(Display* dpy) {
-    for (int i = 0; i < sizeof(keys) / sizeof(* keys); i++) {
-        XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)), keys[i].modifiers, DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync);
-    } 
+    for (int i = 0; i < sizeof(keys) / sizeof(*keys); i++) { XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)), keys[i].modifiers, DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync); }
 }
 
-/* Helpers */ 
+/* Helpers */
 
 void _win_add(Display* dpy, win* w) {
     if (DEBUG) { lll("_win_add"); }
@@ -96,17 +94,12 @@ void _win_add(Display* dpy, win* w) {
 
 void _win_del(Display* dpy, win* w) {
     if (DEBUG) { lll("_win_del"); }
-    if (!win_list || !w) { 
-        if (DEBUG) { lll("1"); }
-        return; 
-    }
-    
-    if (w->prev == w) { if (DEBUG) { lll("2"); } win_list = 0; }
-    if (win_list == w) { if (DEBUG) { lll("3"); } win_list = w->next; }
+    if (!win_list || !w) { return; }
+    if (w->prev == w) { win_list = 0; }
+    if (win_list == w) { win_list = w->next; }
     if (w->next) { w->next->prev = w->prev; }
     if (w->prev) { w->prev->next = w->next; }
-    if (!win_list) { if (DEBUG) { lll("4"); } active = 0; }
-    if (DEBUG) { lll("end _win_del"); }
+    if (!win_list) { active = 0; }
 }
 
 void _restack(Display* dpy, win* w) {
@@ -125,7 +118,7 @@ void _restack(Display* dpy, win* w) {
             w_arr[1] = bar_s;
             w_arr[2] = w->window;
             w_arr[3] = w->s;
-            XRestackWindows(dpy, w_arr, 4); 
+            XRestackWindows(dpy, w_arr, 4);
             return;
         }
     }
@@ -157,7 +150,7 @@ void _focus(Display* dpy, win* w, int a) {
     XSetWindowBorder(dpy, w->t, (a ? TITLEBAR_BORDER_ACTIVE_COLOR : TITLEBAR_BORDER_INACTIVE_COLOR));
     XSetBackground(dpy, w->gc, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR));
     XSetForeground(dpy, w->gc, (a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR));
-    if (XReadBitmapFile(dpy, w->t, TITLEBAR_DECORATION, &bt_w, &bt_h, &bt, &xh, &yh) == BitmapSuccess) { 
+    if (XReadBitmapFile(dpy, w->t, TITLEBAR_DECORATION, &bt_w, &bt_h, &bt, &xh, &yh) == BitmapSuccess) {
         Pixmap px = XCreatePixmap(dpy, w->t, bt_w, bt_h, DefaultDepth(dpy, DefaultScreen(dpy)));
         XCopyPlane(dpy, bt, px, w->gc, 0, 0, bt_w, bt_h, 0, 0, 1);
         XSetWindowBackgroundPixmap(dpy, w->t, px);
@@ -188,21 +181,21 @@ void _destroy_decorations(Display* dpy, win* w) {
 
 void _move(Display* dpy, win* w, int btn, int dx, int dy) {
     if (DEBUG) { lll("\t_move"); }
-    XMoveResizeWindow(dpy, w->window, 
-        w->x + (btn == 1 ? dx : 0), 
-        w->y + (btn == 1 ? dy : 0), 
-        MAX(1, w->w + (btn == 3 ? dx : 0)), 
-        MAX(1, w->h + (btn == 3 ? dy : 0)));
-    XMoveResizeWindow(dpy, w->s, 
-        w->x + SHADOW_X + (btn == 1 ? dx : 0), 
-        w->y + SHADOW_Y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0), 
-        MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)), 
-        MAX(1, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2 + (btn == 3 ? dy : 0)));
-    XMoveResizeWindow(dpy, w->t, 
-        w->x + (btn == 1 ? dx : 0), 
-        w->y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0), 
-        MAX(1, w->w + (BORDER_WIDTH * 2 - TITLEBAR_BORDER_WIDTH * 2) + (btn == 3 ? dx : 0)), 
-        TITLEBAR_HEIGHT);
+    XMoveResizeWindow(dpy, w->window,
+                      w->x + (btn == 1 ? dx : 0),
+                      w->y + (btn == 1 ? dy : 0),
+                      MAX(1, w->w + (btn == 3 ? dx : 0)),
+                      MAX(1, w->h + (btn == 3 ? dy : 0)));
+    XMoveResizeWindow(dpy, w->s,
+                      w->x + SHADOW_X + (btn == 1 ? dx : 0),
+                      w->y + SHADOW_Y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0),
+                      MAX(1, w->w + BORDER_WIDTH * 2 + (btn == 3 ? dx : 0)),
+                      MAX(1, w->h + TITLEBAR_HEIGHT + BORDER_WIDTH * 2 + (btn == 3 ? dy : 0)));
+    XMoveResizeWindow(dpy, w->t,
+                      w->x + (btn == 1 ? dx : 0),
+                      w->y - TITLEBAR_HEIGHT + (btn == 1 ? dy : 0),
+                      MAX(1, w->w + (BORDER_WIDTH * 2 - TITLEBAR_BORDER_WIDTH * 2) + (btn == 3 ? dx : 0)),
+                      TITLEBAR_HEIGHT);
     _text(dpy, w);
 }
 
@@ -223,7 +216,6 @@ void _text(Display* dpy, win* w) {
     XFillRectangle(dpy, w->t, w->gc, x - 3, y - asc - 3, overall.width + 6, desc + asc + 6);
     XSetForeground(dpy, w->gc, gcv.foreground);
     XDrawImageString(dpy, w->t, w->gc, x, y, (char *)name.value, strlen((char *)name.value));
-    
 }
 
 int _status(Display* dpy) {
@@ -260,14 +252,14 @@ void _create_bar(Display* dpy) {
     int yh;
     if (!(XGetWindowAttributes(dpy, bar, &attr))) { return; }
     else {
-        bar_gc = XCreateGC(dpy, bar, 0, 0); 
-        bar_s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, BAR_HEIGHT + 2 * BAR_BORDER_WIDTH, WidthOfScreen(DefaultScreenOfDisplay(dpy)), BAR_SHADOW_Y, 0, 0, BAR_SHADOW); 
+        bar_gc = XCreateGC(dpy, bar, 0, 0);
+        bar_s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, BAR_HEIGHT + 2 * BAR_BORDER_WIDTH, WidthOfScreen(DefaultScreenOfDisplay(dpy)), BAR_SHADOW_Y, 0, 0, BAR_SHADOW);
     }
     XSetWindowBorder(dpy, bar, BAR_BORDER);
     XSetBackground(dpy, bar_gc, BAR_BACKGROUND);
     XSetForeground(dpy, bar_gc, BAR_TEXT);
     XSetFont(dpy, bar_gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
-    if (XReadBitmapFile(dpy, bar, BAR_DECORATION, &bt_w, &bt_h, &bt, &xh, &yh) == BitmapSuccess) { 
+    if (XReadBitmapFile(dpy, bar, BAR_DECORATION, &bt_w, &bt_h, &bt, &xh, &yh) == BitmapSuccess) {
         Pixmap px = XCreatePixmap(dpy, bar, bt_w, bt_h, DefaultDepth(dpy, DefaultScreen(dpy)));
         XCopyPlane(dpy, bt, px, bar_gc, 0, 0, bt_w, bt_h, 0, 0, 1);
         XSetWindowBackgroundPixmap(dpy, bar, px);
@@ -294,7 +286,9 @@ void _refresh_bar(Display* dpy) {
         if (!(XGetWMName(dpy, w->window, &name))) { name.value = "?"; }
         XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
         y = (BAR_HEIGHT + asc - desc) / 2;
+        XSetForeground(dpy, bar_gc, TEXT_ACTIVE_COLOR);
         XDrawRectangle(dpy, bar, bar_gc, all_x - 4, y - asc - 3, overall.width + 7, desc + asc + 6);
+        XSetForeground(dpy, bar_gc, TEXT_INACTIVE_COLOR);
         if (w == active) {
             XSetBackground(dpy, bar_gc, TITLEBAR_ACTIVE_COLOR);
             XSetForeground(dpy, bar_gc, TEXT_ACTIVE_COLOR);
@@ -312,24 +306,15 @@ void _refresh_bar(Display* dpy) {
     }
 }
 
-
 /* Keyboard - Mouse Functions */
 void close(Display* dpy, XEvent ev, int arg) {
     if (DEBUG) { lll(" [CLOSE]"); }
     XGrabServer(dpy);
     if (active) {
         _destroy_decorations(dpy, active);
-        XKillClient(dpy, active->window); 
+        XKillClient(dpy, active->window);
         _win_del(dpy, active);
         switch_window(dpy, ev, 0);
-        // if (active->prev == active) { 
-        //     win_list = 0; 
-        //     active = 0;
-        // } else {
-        //     if (active->next) { active->next->prev = active->prev; }
-        //     if (active->prev) { active->prev->next = active->next; }
-        //     switch_window(dpy, ev, arg);
-        // }
         _refresh_bar(dpy);
     }
     XUngrabServer(dpy);
@@ -339,15 +324,13 @@ void maximize(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XWindowAttributes attr;
         XGetWindowAttributes(dpy, active->window, &attr);
-        if (attr.width == XDisplayWidth(dpy, DefaultScreen(dpy)) && attr.height == XDisplayHeight(dpy, DefaultScreen(dpy)) && attr.x == -BORDER_WIDTH && attr.y == -BORDER_WIDTH) {
-            XMoveResizeWindow(dpy, active->window, active->x, active->y, active->w, active->h);
-        } else {
+        if (attr.width == XDisplayWidth(dpy, DefaultScreen(dpy)) && attr.height == XDisplayHeight(dpy, DefaultScreen(dpy)) && attr.x == -BORDER_WIDTH && attr.y == -BORDER_WIDTH) { XMoveResizeWindow(dpy, active->window, active->x, active->y, active->w, active->h); }
+        else {
             XMoveResizeWindow(dpy, active->window, -BORDER_WIDTH, -BORDER_WIDTH, XDisplayWidth(dpy, DefaultScreen(dpy)), XDisplayHeight(dpy, DefaultScreen(dpy)));
-            if ( BAR_HEIGHT ) { _status(dpy); }
+            _status(dpy);
         }
     }
 }
-
 
 void switch_window(Display* dpy, XEvent ev, int arg) {
     if (DEBUG) { lll("switch_window"); }
@@ -363,7 +346,7 @@ void move(Display* dpy, XEvent ev, int arg) {
     if (active) {
         XRaiseWindow(dpy, active->window);
         _restack(dpy, active);
-        switch(arg) {
+        switch (arg) {
             case LEFT:
                 _move(dpy, active, 1, -MOVE_DELTA, 0);
                 win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));
@@ -387,16 +370,12 @@ void move(Display* dpy, XEvent ev, int arg) {
 }
 
 void logout(Display* dpy, XEvent ev, int arg) {
-    lll("=== ΕΝD SESSION");
+    if (DEBUG) { lll("=== ΕΝD SESSION"); }
     running = 0;
 }
 
 void center(Display* dpy, XEvent ev, int arg) {
-    if (active) {
-        // int dx = (((WidthOfScreen(DefaultScreenOfDisplay(dpy)) - active->w) / 2) - active->x);
-        // int dy = (((HeightOfScreen(DefaultScreenOfDisplay(dpy)) - active->h) / 2) - active->y);
-        _move(dpy, active, 1, (((WidthOfScreen(DefaultScreenOfDisplay(dpy)) - active->w) / 2) - active->x), (((HeightOfScreen(DefaultScreenOfDisplay(dpy)) - active->h) / 2) - active->y));
-    }
+    if (active) { _move(dpy, active, 1, (((WidthOfScreen(DefaultScreenOfDisplay(dpy)) - active->w) / 2) - active->x), (((HeightOfScreen(DefaultScreenOfDisplay(dpy)) - active->h) / 2) - active->y)); }
 }
 
 void event_handler(Display* dpy, XEvent ev) {
@@ -405,12 +384,12 @@ void event_handler(Display* dpy, XEvent ev) {
     switch (ev.type) {
         case ConfigureRequest:
             if (DEBUG) { lll("configurereq"); }
-            XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &(XWindowChanges) {
-                .x = ev.xconfigurerequest.x,
-                .y = ev.xconfigurerequest.y,
-                .width = ev.xconfigurerequest.width,
-                .height = ev.xconfigurerequest.height,
-            });
+            XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &(XWindowChanges){
+                                                                                                    .x = ev.xconfigurerequest.x,
+                                                                                                    .y = ev.xconfigurerequest.y,
+                                                                                                    .width = ev.xconfigurerequest.width,
+                                                                                                    .height = ev.xconfigurerequest.height,
+                                                                                                });
             for (ALL_WINDOWS) {
                 if (w->window == ev.xconfigurerequest.window) {
                     w->x = ev.xconfigurerequest.x;
@@ -418,14 +397,14 @@ void event_handler(Display* dpy, XEvent ev) {
                     w->w = ev.xconfigurerequest.width;
                     w->h = ev.xconfigurerequest.height;
                     XMoveResizeWindow(dpy, w->s, w->x + SHADOW_X, w->y + SHADOW_Y - TITLEBAR_HEIGHT, w->w + BORDER_WIDTH * 2, w->h + BORDER_WIDTH * 2 + TITLEBAR_HEIGHT);
-                    XMoveResizeWindow(dpy, w->t, w->x, w->y - TITLEBAR_HEIGHT, w->w + (BORDER_WIDTH * 2 - TITLEBAR_BORDER_WIDTH * 2), TITLEBAR_HEIGHT); 
+                    XMoveResizeWindow(dpy, w->t, w->x, w->y - TITLEBAR_HEIGHT, w->w + (BORDER_WIDTH * 2 - TITLEBAR_BORDER_WIDTH * 2), TITLEBAR_HEIGHT);
                     _restack(dpy, w);
                 }
             }
             break;
         case MapRequest:
             if (DEBUG) { lll("mapreq"); }
-            if (!(w = (win *) calloc(1, sizeof(win)))) { exit(1); }
+            if (!(w = (win *)calloc(1, sizeof(win)))) { exit(1); }
             win_size(ev.xmaprequest.window, &(w->x), &(w->y), &(w->w), &(w->h));
             w->window = ev.xmaprequest.window;
             XSelectInput(dpy, w->window, StructureNotifyMask | EnterWindowMask | FocusChangeMask | PropertyChangeMask);
@@ -438,15 +417,6 @@ void event_handler(Display* dpy, XEvent ev) {
             w->y += TITLEBAR_HEIGHT + (BAR_HEIGHT ? (BAR_HEIGHT + (2 * BAR_BORDER_WIDTH) + BAR_SHADOW_Y) : 0);
             active = w;
             _win_add(dpy, w);
-            //if (win_list) {
-            //    win_list->prev->next = w;
-            //    w->prev = win_list->prev;
-            //    win_list->prev = w;
-            //    w->next = win_list;
-            //} else {
-            //    win_list = w;
-            //    win_list->prev = win_list->next = win_list;
-            //}
             XSetWindowBorderWidth(dpy, w->window, BORDER_WIDTH);
             XMapWindow(dpy, w->s);
             XMapWindow(dpy, w->t);
@@ -459,7 +429,7 @@ void event_handler(Display* dpy, XEvent ev) {
             key_handler(dpy, ev);
             break;
         case EnterNotify:
-            if (DEBUG) { lll("enterreq"); }
+            if (DEBUG) { lll("enternot"); }
             for (ALL_WINDOWS) {
                 if (w->window == ev.xcrossing.window || w->t == ev.xcrossing.window || w->s == ev.xcrossing.window) {
                     XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
@@ -474,17 +444,6 @@ void event_handler(Display* dpy, XEvent ev) {
                     active = w;
                     close(dpy, ev, 1);
                     break;
-                    //_destroy_decorations(dpy, w);
-                    //if (w->prev == w) { 
-                    //    win_list = 0; 
-                    //    active = 0;
-                    //    break;
-                    //} else {
-                    //    if (w->next) { w->next->prev = w->prev; }
-                    //    if (w->prev) { w->prev->next = w->next; }
-                    //    switch_window(dpy, ev, 0);
-                    //}
-                    //break;
                 }
             }
             _refresh_bar(dpy);
@@ -495,18 +454,6 @@ void event_handler(Display* dpy, XEvent ev) {
                 if (w->window == ev.xunmap.window) {
                     active = w;
                     close(dpy, ev, 2);
-                    break;
-                    //XUnmapWindow(dpy, w->window);
-                    //_destroy_decorations(dpy, w);
-                    //if (w->prev == w) { 
-                    //    win_list = 0; 
-                    //    active = 0;
-                    //    break;
-                    //} else {
-                    //    if (w->next) { w->next->prev = w->prev; }
-                    //    if (w->prev) { w->prev->next = w->next; }
-                    //    switch_window(dpy, ev, 0);
-                    //}
                     break;
                 }
             }
@@ -531,7 +478,7 @@ void event_handler(Display* dpy, XEvent ev) {
                 break;
             }
             for (ALL_WINDOWS) {
-                if (w->t == ev.xexpose.window) { 
+                if (w->t == ev.xexpose.window) {
                     if (w != active) { _text(dpy, w); }
                 }
             }
@@ -543,18 +490,17 @@ void event_handler(Display* dpy, XEvent ev) {
         case MotionNotify:
             break;
         case PropertyNotify:
-            if ((ev.xproperty.window == DefaultRootWindow(dpy))) {
-                //lll("STATUS");
-                if (BAR_HEIGHT) { _refresh_bar(dpy); }
+            if (ev.xproperty.window == DefaultRootWindow(dpy)) {
+                _refresh_bar(dpy);
                 break;
             }
             for (ALL_WINDOWS) {
                 if (w->window == ev.xproperty.window) {
                     if (DEBUG) { lll("propertynot"); }
-                    if (ev.xproperty.atom == XA_WM_NAME) { 
-                        _text(dpy, w); 
+                    if (ev.xproperty.atom == XA_WM_NAME) {
+                        _text(dpy, w);
                         _refresh_bar(dpy);
-                    }	    
+                    }
                     break;
                 }
             }
@@ -564,41 +510,43 @@ void event_handler(Display* dpy, XEvent ev) {
     }
 }
 
-int main(void)
-{
-    if(!(dpy = XOpenDisplay(0x0))) return 1;
+int main(void) {
+    if (!(dpy = XOpenDisplay(0x0))) { return 1; }
     XTextProperty wm_name;
     wm_name.value = "VSWM";
     wm_name.nitems = 1;
-    
+
     XSetWMName(dpy, DefaultRootWindow(dpy), &wm_name);
 
     if (DEBUG) { lll("=== SESSION"); }
     XSetErrorHandler(error_handler);
 
     XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask | PropertyChangeMask);
-    XGrabButton(dpy, 1, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
-    XGrabButton(dpy, 3, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask|ButtonReleaseMask|PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    XGrabButton(dpy, 1, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    XGrabButton(dpy, 3, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     key_init(dpy);
 
     XDefineCursor(dpy, DefaultRootWindow(dpy), XCreateFontCursor(dpy, 68));
     start.subwindow = None;
 
     _create_bar(dpy);
-    while(running) {
+    while (running) {
         XNextEvent(dpy, &ev);
 
         event_handler(dpy, ev);
         if (ev.type == ButtonPress) {
-            if (ev.xbutton.window == bar || ev.xbutton.window == bar_s) { break; }
             start = ev.xbutton;
-            if (ev.xbutton.subwindow == None && !(ev.xbutton.state & MOVE_KEY)) { 
+            if (ev.xbutton.subwindow == None && !(ev.xbutton.state & MOVE_KEY)) {
                 XRaiseWindow(dpy, active->window);
                 _restack(dpy, active);
                 _text(dpy, active);
-                start.subwindow = active->window;
-            } 
+                start.subwindow = ev.xbutton.window;
+            }
         } else if (ev.type == MotionNotify && start.subwindow != None) {
+            if (start.subwindow == bar || start.subwindow == bar_s) {
+                start.subwindow = None;
+                continue;
+            }
             int xdiff = ev.xbutton.x_root - start.x_root;
             int ydiff = ev.xbutton.y_root - start.y_root;
             int btn = 0;
@@ -609,9 +557,11 @@ int main(void)
                 } else { btn = start.button; }
             }
             _move(dpy, active, btn, xdiff, ydiff);
-        } else if(ev.type == ButtonRelease) {
+        } else if (ev.type == ButtonRelease) {
             start.subwindow = None;
             if (active) { win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h)); }
         }
     }
+
+    return 0;
 }
