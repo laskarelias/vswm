@@ -1,7 +1,15 @@
 #include "vswm.h"
 
-
 #define DEBUG 1
+
+#define BAR_HEIGHT 15
+#define BAR_BACKGROUND 0xbbbbbb
+#define BAR_TEXT 0x101010
+#define BAR_BORDER 0xaaaaaa
+#define BAR_BORDER_WIDTH 2
+#define BAR_SHADOW 0x000000
+#define BAR_SHADOW_Y 3
+#define BAR_DECORATION "/usr/include/X11/bitmaps/hlines2" 
 
 #define BORDER_WIDTH 2
 #define BORDER_ACTIVE_COLOR 0xaaaaaa
@@ -30,6 +38,7 @@ int MOVE_KEY = super;
 
 combo keys[] = {
     { super, "c",   close,         0     },
+    { super, "z",   center,        0     },
     { super, "m",   maximize,      0     },
     { super, "Tab", switch_window, 0     },
     { super, "h",   move,          LEFT  },
