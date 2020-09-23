@@ -375,7 +375,10 @@ void logout(Display* dpy, XEvent ev, int arg) {
 }
 
 void center(Display* dpy, XEvent ev, int arg) {
-    if (active) { _move(dpy, active, 1, (((WidthOfScreen(DefaultScreenOfDisplay(dpy)) - active->w) / 2) - active->x), (((HeightOfScreen(DefaultScreenOfDisplay(dpy)) - active->h) / 2) - active->y)); }
+    if (active) { 
+        _move(dpy, active, 1, (((WidthOfScreen(DefaultScreenOfDisplay(dpy)) - active->w) / 2) - active->x), (((HeightOfScreen(DefaultScreenOfDisplay(dpy)) - active->h) / 2) - active->y)); 
+        win_size(active->window, &(active->x), &(active->y), &(active->w), &(active->h));    
+    }
 }
 
 void event_handler(Display* dpy, XEvent ev) {
