@@ -9,7 +9,7 @@
 #define BAR_BORDER_WIDTH 2
 #define BAR_SHADOW 0x000000
 #define BAR_SHADOW_Y 3
-#define BAR_DECORATION "/usr/include/X11/bitmaps/hlines2" 
+#define BAR_DECORATION "/usr/include/X11/bitmaps/gray3" 
 
 #define BORDER_WIDTH 2
 #define BORDER_ACTIVE_COLOR 0xaaaaaa
@@ -46,7 +46,6 @@ combo keys[] = {
     { super, "k",   move,          UP    },
     { super, "l",   move,          RIGHT },
     { super, "q",   logout,        0     },
-
 };
 
 // button titlebar[] = {

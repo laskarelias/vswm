@@ -21,6 +21,13 @@ typedef struct buttons {
     int arg;
 } button;
 
+typedef struct btns {
+    Window window;
+    int x, y;
+    unsigned int w, h;
+    GC gc;
+} btn;
+
 typedef struct wins win;
 typedef struct wins {
     Window window;
@@ -29,6 +36,8 @@ typedef struct wins {
     int size;
     win* prev;
     win* next;
+    btn tb_text;
+    btn tb_btn;
     Window t;
     Window s;
     GC gc;
@@ -40,8 +49,15 @@ void _destroy_decorations(Display* dpy, win* w);
 void _move(Display* dpy, win* w, int btn, int dx, int dy);
 void _text(Display* dpy, win* w);
 int  _status(Display* dpy);
-// void _button(Display* dpy, win* w, int x, int y, unsigned int width, unsigned int h, int i);
+void _refresh_bar(Display* dpy);
+void _text2(Display* dpy, btn b, XTextProperty name, int x, int y, int pad, unsigned long fg, unsigned long bg);
+void _get_name(Display* dpy, Window win, XTextProperty* name, int* d, int* asc, int* desc, XCharStruct* overall);
+btn  _btn(Display* dpy, Window parent, int x, int y, unsigned int w, unsigned int h, unsigned long b, unsigned long fg, unsigned long bg);
+void _refresh_btn(Display* dpy, win* b, char* text);
 
+
+
+// void _button(Display* dpy, win* w, int x, int y, unsigned int width, unsigned int h, int i);
 
 void lll(char msg[]);
 int  error_handler(Display* dpy, XErrorEvent* ev);
