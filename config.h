@@ -2,14 +2,14 @@
 
 #define DEBUG 1
 
-#define BAR_HEIGHT 0
+#define BAR_HEIGHT 19
 #define BAR_BACKGROUND 0xbbbbbb
 #define BAR_TEXT 0x101010
 #define BAR_BORDER 0xaaaaaa
 #define BAR_BORDER_WIDTH 2
 #define BAR_SHADOW 0x000000
 #define BAR_SHADOW_Y 3
-#define BAR_DECORATION "/usr/include/X11/bitmaps/gray3" 
+#define BAR_DECORATION "/usr/include/X11/bitmaps/hlines2" 
 
 #define BORDER_WIDTH 2
 #define BORDER_ACTIVE_COLOR 0xaaaaaa
@@ -48,6 +48,8 @@ combo keys[] = {
     { super, "q",   logout,        0     },
 };
 
-// button titlebar[] = {
-//     {"/usr/inlcude/X11/bitmaps/xlogo11", close, 0},
-// };
+titlebar_button buttons[] = {
+    {"X", close,    0},
+    {"Oo", maximize, 0},
+    {"===", center,   0},
+};

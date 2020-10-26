@@ -7,7 +7,6 @@ enum {LEFT, DOWN, UP, RIGHT};
 enum {tall, wide};
 enum {INACTIVE, ACTIVE};
 
-
 typedef struct combos {
     int modifiers;
     char key[8];
@@ -15,11 +14,11 @@ typedef struct combos {
     int arg; 
 } combo;
 
-typedef struct buttons {
-    char icon[128];
-    void (*function)(Display* dpy, XEvent ev, int arg);
-    int arg;
-} button;
+typedef struct titlebar_buttons {
+    char c[8];
+    void (* function)(Display* dpy, XEvent ev, int arg);
+    int arg; 
+} titlebar_button;
 
 typedef struct btns btn;
 typedef struct btns {

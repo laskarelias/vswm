@@ -23,7 +23,9 @@ __   _______      ___ __ ___
 #include "config.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 #define win_size(W, gx, gy, gw, gh) XGetGeometry(dpy, W, &(Window){0}, gx, gy, gw, gh, &(unsigned int){0}, &(unsigned int){0})
+
 #define ALL_WINDOWS            \
     win* t = 0, *w = win_list; \
     w && t != win_list->prev;  \
@@ -32,6 +34,11 @@ __   _______      ___ __ ___
     btn* t = 0, *b = st_list; \
     b && t != st_list->prev;  \
     t = b, b = b->next
+#define ALL_BUTTONS               \
+    btn* t = 0, *b = w->btn_list; \
+    b && t != w->btn_list->prev;  \
+    t = b, b = b->next
+
 static unsigned int running = 1;
 
 static win* win_list = {0};
@@ -45,6 +52,7 @@ static btn bar_status;
 static GC bar_gc;
 XButtonEvent start;
 static XEvent ev;
+win* w;
 
 char i2msg[12];
 
@@ -131,6 +139,30 @@ void _st_del(Display* dpy, btn* b) {
     if (b->prev) { b->prev->next = b->next; }
     if (!st_list) { active = 0; }
 }
+
+void _btn_add(Display* dpy, btn* b) {
+    if (DEBUG) { lll("_btn_add"); }
+    if (w->btn_list) {
+        w->btn_list->prev->next = b;
+        b->prev = w->btn_list->prev;
+        w->btn_list->prev = b;
+        b->next = w->btn_list;
+    } else {
+        w->btn_list = b;
+        w->btn_list->prev = w->btn_list->next = w->btn_list;
+    }
+}
+
+void _btn_del(Display* dpy, btn* b) {
+    if (DEBUG) { lll("_btn_del"); }
+    if (!w->btn_list || !b) { return; }
+    if (b->prev == b) { w->btn_list = 0; }
+    if (w->btn_list == b) { w->btn_list = b->next; }
+    if (b->next) { b->next->prev = b->prev; }
+    if (b->prev) { b->prev->next = b->next; }
+    if (!w->btn_list) { active = 0; }
+}
+
 
 void _restack(Display* dpy, win* w) {
     if (DEBUG) { lll("\t_restack"); }
@@ -264,12 +296,12 @@ void _text2(Display* dpy, btn b, XTextProperty name, int x, int y, int pad, unsi
     if (DEBUG) { lll("_text2"); }
     int d, asc, desc;
     XCharStruct overall;
+    XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char*)name.value, strlen((char*)name.value), &d, &asc, &desc, &overall);
     XSetWindowBackground(dpy, b.window, bg);
     XSetBackground(dpy, b.gc, bg);
     XSetForeground(dpy, b.gc, fg);
-    XClearWindow(dpy, b.window);
-    XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char*)name.value, strlen((char*)name.value), &d, &asc, &desc, &overall);
     XMoveResizeWindow(dpy, b.window, x, y, (unsigned int)(overall.width + 2 * pad), (unsigned int)(asc - desc + 4 * pad));
+    XClearWindow(dpy, b.window);
     XDrawImageString(dpy, b.window, b.gc, pad, asc - desc + 2 * pad, (char*)name.value, strlen((char*)name.value));
 }
 
@@ -293,12 +325,6 @@ void _status(Display* dpy) {
     XTextProperty name;
     if (!(XGetWMName(dpy, DefaultRootWindow(dpy), &name))) { name.value = (unsigned char*)"V S W M"; }
     _text2(dpy, bar_status, name, 0, 0, 2, BAR_TEXT, BAR_BACKGROUND);
-}
-
-void _refresh_btn(Display* dpy, win* b, char* text) {
-
-    //void _text2(Display* dpy, win* b, char* text, int x, int y, int pad, unsigned long fg, unsigned long bg) {
-
 }
 
 void _create_bar(Display* dpy) {
@@ -455,7 +481,12 @@ void center(Display* dpy, XEvent ev, int arg) {
 
 void event_handler(Display* dpy, XEvent ev) {
     win *w;
+    btn *b;
+    btn bb;
+    int width = 0;
+    int i = 0;
     XSetWindowAttributes attr;
+    XTextProperty name;
     switch (ev.type) {
         case ConfigureRequest:
             if (DEBUG) { lll("configurereq"); }
@@ -494,10 +525,20 @@ void event_handler(Display* dpy, XEvent ev) {
             XSetWindowBorderWidth(dpy, w->window, BORDER_WIDTH);
             XMapWindow(dpy, w->s);
             XMapWindow(dpy, w->t);
+            for (i = 0; i < sizeof(buttons) / sizeof(*buttons); i++) { 
+                if (!(b = (btn *)calloc(1, sizeof(btn)))) { exit(1); }
+                bb = _btn(dpy, w->t, width, 0, 20, 20, 0x000000, TEXT_ACTIVE_COLOR, TITLEBAR_ACTIVE_COLOR);
+                // _btn_add...
+                name.value = (unsigned char*)&(buttons[i].c);
+                name.nitems = 1;
+                _text2(dpy, bb, name, width, 0, 2, TEXT_ACTIVE_COLOR, TITLEBAR_ACTIVE_COLOR);
+                width += 30;
+                XMapWindow(dpy, bb.window);
+            }
             XMapWindow(dpy, w->window);
-            _restack(dpy, w);
+            //_restack(dpy, w);
             _move(dpy, w, 0, 0, 0);
-            XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
+            //XSetInputFocus(dpy, w->window, RevertToParent, CurrentTime);
             break;
         case KeyPress:
             key_handler(dpy, ev);
