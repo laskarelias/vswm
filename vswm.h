@@ -21,11 +21,14 @@ typedef struct buttons {
     int arg;
 } button;
 
+typedef struct btns btn;
 typedef struct btns {
     Window window;
     int x, y;
     unsigned int w, h;
     GC gc;
+    btn* prev;
+    btn* next;
 } btn;
 
 typedef struct wins win;
@@ -36,8 +39,7 @@ typedef struct wins {
     int size;
     win* prev;
     win* next;
-    btn tb_text;
-    btn tb_btn;
+    btn* btn_list;
     Window t;
     Window s;
     GC gc;
@@ -48,7 +50,7 @@ void _focus(Display* dpy, win* w, int a);
 void _destroy_decorations(Display* dpy, win* w);
 void _move(Display* dpy, win* w, int btn, int dx, int dy);
 void _text(Display* dpy, win* w);
-int  _status(Display* dpy);
+void _status(Display* dpy);
 void _refresh_bar(Display* dpy);
 void _text2(Display* dpy, btn b, XTextProperty name, int x, int y, int pad, unsigned long fg, unsigned long bg);
 void _get_name(Display* dpy, Window win, XTextProperty* name, int* d, int* asc, int* desc, XCharStruct* overall);

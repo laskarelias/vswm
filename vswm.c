@@ -28,14 +28,20 @@ __   _______      ___ __ ___
     win* t = 0, *w = win_list; \
     w && t != win_list->prev;  \
     t = w, w = w->next
+#define ALL_STATUS            \
+    btn* t = 0, *b = st_list; \
+    b && t != st_list->prev;  \
+    t = b, b = b->next
 static unsigned int running = 1;
 
 static win* win_list = {0};
 static win* active = {0};
+static btn* st_list = {0};
 static Window w_arr[5];
 static Display* dpy;
 static Window bar;
 static Window bar_s;
+static btn bar_status;
 static GC bar_gc;
 XButtonEvent start;
 static XEvent ev;
@@ -60,11 +66,11 @@ void run(Display* dpy, XEvent ev, int arg) {
 }
 
 int error_handler(Display* dpy, XErrorEvent* ev) {
-    int code = ev->error_code;
-    char buf[256] = { 0 };
+    // int code = ev->error_code;
+    // char buf[256] = { 0 };
 
-    XGetErrorText(dpy, code, buf, 256);
-    lll(buf);
+    // XGetErrorText(dpy, code, buf, 256);
+    // lll(buf);
     return 0;
 }
 
@@ -101,6 +107,29 @@ void _win_del(Display* dpy, win* w) {
     if (w->next) { w->next->prev = w->prev; }
     if (w->prev) { w->prev->next = w->next; }
     if (!win_list) { active = 0; }
+}
+
+void _st_add(Display* dpy, btn* b) {
+    if (DEBUG) { lll("_st_add"); }
+    if (st_list) {
+        st_list->prev->next = b;
+        b->prev = st_list->prev;
+        st_list->prev = b;
+        b->next = st_list;
+    } else {
+        st_list = b;
+        st_list->prev = st_list->next = st_list;
+    }
+}
+
+void _st_del(Display* dpy, btn* b) {
+    if (DEBUG) { lll("_st_del"); }
+    if (!st_list || !b) { return; }
+    if (b->prev == b) { st_list = 0; }
+    if (st_list == b) { st_list = b->next; }
+    if (b->next) { b->next->prev = b->prev; }
+    if (b->prev) { b->prev->next = b->next; }
+    if (!st_list) { active = 0; }
 }
 
 void _restack(Display* dpy, win* w) {
@@ -161,7 +190,7 @@ void _focus(Display* dpy, win* w, int a) {
     } else { XSetWindowBackground(dpy, w->t, (a ? TITLEBAR_ACTIVE_COLOR : TITLEBAR_INACTIVE_COLOR)); }
     _refresh_bar(dpy);
     _get_name(dpy, w->window, &name, &d, &asc, &desc, &overall);
-    _text2(dpy, w->tb_btn, name, 0, 0, 3, a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR, a ? TITLEBAR_INACTIVE_COLOR : TITLEBAR_ACTIVE_COLOR);
+    //_text2(dpy, w->tb_btn, name, 0, 0, 3, a ? TEXT_ACTIVE_COLOR : TEXT_INACTIVE_COLOR, a ? TITLEBAR_INACTIVE_COLOR : TITLEBAR_ACTIVE_COLOR);
 
     //_text(dpy, w);
 }
@@ -235,27 +264,22 @@ void _text2(Display* dpy, btn b, XTextProperty name, int x, int y, int pad, unsi
     if (DEBUG) { lll("_text2"); }
     int d, asc, desc;
     XCharStruct overall;
-    x += pad;
-    y += pad;
-    XGCValues gcv;
-    XGetGCValues(dpy, b.gc, GCBackground, &gcv);
-    XMoveResizeWindow(dpy, b.window, x, y, overall.width + 2 * pad, desc - asc + 2 * pad);
-    if (DEBUG) { lll("1"); }
+    XSetWindowBackground(dpy, b.window, bg);
+    XSetBackground(dpy, b.gc, bg);
+    XSetForeground(dpy, b.gc, fg);
     XClearWindow(dpy, b.window);
-    if (DEBUG) { lll("2"); }
     XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char*)name.value, strlen((char*)name.value), &d, &asc, &desc, &overall);
-    if (DEBUG) { lll("3"); }  
-    XDrawString(dpy, b.window, b.gc, x, y, (char*)name.value, strlen((char*)name.value));
-    if (DEBUG) { lll("4"); }
+    XMoveResizeWindow(dpy, b.window, x, y, (unsigned int)(overall.width + 2 * pad), (unsigned int)(asc - desc + 4 * pad));
+    XDrawImageString(dpy, b.window, b.gc, pad, asc - desc + 2 * pad, (char*)name.value, strlen((char*)name.value));
 }
 
 btn _btn(Display* dpy, Window parent, int x, int y, unsigned int w, unsigned int h, unsigned long b, unsigned long fg, unsigned long bg) {
     if (DEBUG) { lll("btn"); }
     btn button;
     XSetWindowAttributes attr;
-    XGCValues gcv;
     button.window = XCreateWindow(dpy, parent, x, y, w, h, 1, CopyFromParent, InputOutput, CopyFromParent, 0, &attr);
-    XSetWindowBorder(dpy, button.window, 0x000000);
+    XSetWindowBorder(dpy, button.window, b);
+    XSetWindowBackground(dpy, button.window, fg);
     button.gc = XCreateGC(dpy, button.window, 0, 0);
     XSetFont(dpy, button.gc, XLoadQueryFont(dpy, TEXT_FONT)->fid);
     XSetForeground(dpy, button.gc, fg);
@@ -263,27 +287,12 @@ btn _btn(Display* dpy, Window parent, int x, int y, unsigned int w, unsigned int
     return button;
 }
 
-int _status(Display* dpy) {
+void _status(Display* dpy) {
     if (DEBUG) { lll("_status"); }
-    if (!BAR_HEIGHT) { return 0; }
-    int x, y, d, asc, desc;
-    XCharStruct overall;
+    if (!BAR_HEIGHT) { return; }
     XTextProperty name;
-    XGCValues gcv;
     if (!(XGetWMName(dpy, DefaultRootWindow(dpy), &name))) { name.value = (unsigned char*)"V S W M"; }
-    XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
-    y = (BAR_HEIGHT + asc - desc) / 2;
-    x = 3;
-    XClearWindow(dpy, bar);
-    XSetBackground(dpy, bar_gc, BAR_BACKGROUND);
-    XSetForeground(dpy, bar_gc, BAR_TEXT);
-    XDrawRectangle(dpy, bar, bar_gc, x - 4, y - asc - 3, overall.width + 7, desc + asc + 6);
-    XGetGCValues(dpy, bar_gc, GCBackground | GCForeground, &gcv);
-    XSetForeground(dpy, bar_gc, gcv.background);
-    XFillRectangle(dpy, bar, bar_gc, x - 3, y - asc - 3, overall.width + 6, desc + asc + 6);
-    XSetForeground(dpy, bar_gc, gcv.foreground);
-    XDrawImageString(dpy, bar, bar_gc, x, y, (char *)name.value, strlen((char *)name.value));
-    return overall.width + 6;
+    _text2(dpy, bar_status, name, 0, 0, 2, BAR_TEXT, BAR_BACKGROUND);
 }
 
 void _refresh_btn(Display* dpy, win* b, char* text) {
@@ -293,6 +302,7 @@ void _refresh_btn(Display* dpy, win* b, char* text) {
 }
 
 void _create_bar(Display* dpy) {
+    if (DEBUG) {lll("_create_bar");}
     XWindowAttributes attr;
     XSetWindowAttributes xw;
     bar = XCreateWindow(dpy, DefaultRootWindow(dpy), 0, 0, WidthOfScreen(DefaultScreenOfDisplay(dpy)) - 2 * BAR_BORDER_WIDTH, BAR_HEIGHT, BAR_BORDER_WIDTH, CopyFromParent, InputOutput, CopyFromParent, 0, &xw);
@@ -305,7 +315,12 @@ void _create_bar(Display* dpy) {
     else {
         bar_gc = XCreateGC(dpy, bar, 0, 0);
         bar_s = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), 0, BAR_HEIGHT + 2 * BAR_BORDER_WIDTH, WidthOfScreen(DefaultScreenOfDisplay(dpy)), BAR_SHADOW_Y, 0, 0, BAR_SHADOW);
+        bar_status = _btn(dpy, bar, 0, 0, 100, BAR_HEIGHT, BAR_BORDER, BAR_TEXT, BAR_BACKGROUND);
+        XMapWindow(dpy, bar_status.window);
+        XClearWindow(dpy, bar_status.window);
+        _st_add(dpy, &bar_status);
     }
+    
     XSetWindowBorder(dpy, bar, BAR_BORDER);
     XSetBackground(dpy, bar_gc, BAR_BACKGROUND);
     XSetForeground(dpy, bar_gc, BAR_TEXT);
@@ -323,39 +338,44 @@ void _create_bar(Display* dpy) {
 void _refresh_bar(Display* dpy) {
     if (DEBUG) { lll("_refresh_bar"); }
     if (!BAR_HEIGHT) { return; }
-    XClearWindow(dpy, bar);
-    int all_x = _status(dpy) + 3 + 10;
-    XSetBackground(dpy, bar_gc, TITLEBAR_INACTIVE_COLOR);
-    XSetForeground(dpy, bar_gc, TEXT_INACTIVE_COLOR);
-    for (ALL_WINDOWS) {
-        //int x, y, d, asc, desc;
-        int y, d, asc, desc;
-        XCharStruct overall;
-        XTextProperty name;
-        XGCValues gcv;
-        //XWindowAttributes xw;
-        //if (!(XGetWindowAttributes(dpy, w->window, &xw))) { continue; }
-        if (!(XGetWMName(dpy, w->window, &name))) { name.value = (unsigned char*)"?"; }
-        XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
-        y = (BAR_HEIGHT + asc - desc) / 2;
-        XSetForeground(dpy, bar_gc, TEXT_ACTIVE_COLOR);
-        XDrawRectangle(dpy, bar, bar_gc, all_x - 4, y - asc - 3, overall.width + 7, desc + asc + 6);
-        XSetForeground(dpy, bar_gc, TEXT_INACTIVE_COLOR);
-        if (w == active) {
-            XSetBackground(dpy, bar_gc, TITLEBAR_ACTIVE_COLOR);
-            XSetForeground(dpy, bar_gc, TEXT_ACTIVE_COLOR);
-        }
-        XGetGCValues(dpy, bar_gc, GCBackground | GCForeground, &gcv);
-        XSetForeground(dpy, bar_gc, gcv.background);
-        XFillRectangle(dpy, bar, bar_gc, all_x - 3, y - asc - 3, overall.width + 6, desc + asc + 6);
-        XSetForeground(dpy, bar_gc, gcv.foreground);
-        XDrawImageString(dpy, bar, bar_gc, all_x, y, (char *)name.value, strlen((char *)name.value));
-        if (w == active) {
-            XSetBackground(dpy, bar_gc, TITLEBAR_INACTIVE_COLOR);
-            XSetForeground(dpy, bar_gc, TEXT_INACTIVE_COLOR);
-        }
-        all_x += overall.width + 6 + 10;
-    }
+
+    XTextProperty name;
+    if (!(XGetWMName(dpy, DefaultRootWindow(dpy), &name))) { name.value = (unsigned char*)"V S W M"; }
+    _text2(dpy, bar_status, name, 0, 0, 2, BAR_TEXT, BAR_BACKGROUND);
+
+    // XClearWindow(dpy, bar);
+    // int all_x = _status(dpy) + 3 + 10;
+    // XSetBackground(dpy, bar_gc, TITLEBAR_INACTIVE_COLOR);
+    // XSetForeground(dpy, bar_gc, TEXT_INACTIVE_COLOR);
+    // for (ALL_WINDOWS) {
+    //     //int x, y, d, asc, desc;
+    //     int y, d, asc, desc;
+    //     XCharStruct overall;
+    //     XTextProperty name;
+    //     XGCValues gcv;
+    //     //XWindowAttributes xw;
+    //     //if (!(XGetWindowAttributes(dpy, w->window, &xw))) { continue; }
+    //     if (!(XGetWMName(dpy, w->window, &name))) { name.value = (unsigned char*)"?"; }
+    //     XTextExtents(XLoadQueryFont(dpy, TEXT_FONT), (char *)name.value, strlen((char *)name.value), &d, &asc, &desc, &overall);
+    //     y = (BAR_HEIGHT + asc - desc) / 2;
+    //     XSetForeground(dpy, bar_gc, TEXT_ACTIVE_COLOR);
+    //     XDrawRectangle(dpy, bar, bar_gc, all_x - 4, y - asc - 3, overall.width + 7, desc + asc + 6);
+    //     XSetForeground(dpy, bar_gc, TEXT_INACTIVE_COLOR);
+    //     if (w == active) {
+    //         XSetBackground(dpy, bar_gc, TITLEBAR_ACTIVE_COLOR);
+    //         XSetForeground(dpy, bar_gc, TEXT_ACTIVE_COLOR);
+    //     }
+    //     XGetGCValues(dpy, bar_gc, GCBackground | GCForeground, &gcv);
+    //     XSetForeground(dpy, bar_gc, gcv.background);
+    //     XFillRectangle(dpy, bar, bar_gc, all_x - 3, y - asc - 3, overall.width + 6, desc + asc + 6);
+    //     XSetForeground(dpy, bar_gc, gcv.foreground);
+    //     XDrawImageString(dpy, bar, bar_gc, all_x, y, (char *)name.value, strlen((char *)name.value));
+    //     if (w == active) {
+    //         XSetBackground(dpy, bar_gc, TITLEBAR_INACTIVE_COLOR);
+    //         XSetForeground(dpy, bar_gc, TEXT_INACTIVE_COLOR);
+    //     }
+    //     all_x += overall.width + 6 + 10;
+    // }
 }
 
 /* Keyboard - Mouse Functions */
@@ -470,12 +490,10 @@ void event_handler(Display* dpy, XEvent ev) {
             XSelectInput(dpy, w->s, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask);
             w->y += TITLEBAR_HEIGHT + (BAR_HEIGHT ? (BAR_HEIGHT + (2 * BAR_BORDER_WIDTH) + BAR_SHADOW_Y) : 0);
             active = w;
-            w->tb_text = _btn(dpy, w->t, 3, 3, 1, 1, 0x000000, TEXT_INACTIVE_COLOR, TITLEBAR_INACTIVE_COLOR);
             _win_add(dpy, w);
             XSetWindowBorderWidth(dpy, w->window, BORDER_WIDTH);
             XMapWindow(dpy, w->s);
             XMapWindow(dpy, w->t);
-            XMapWindow(dpy, w->tb_text.window);
             XMapWindow(dpy, w->window);
             _restack(dpy, w);
             _move(dpy, w, 0, 0, 0);
@@ -574,7 +592,6 @@ int main(void) {
     wm_name.nitems = 1;
 
     XSetWMName(dpy, DefaultRootWindow(dpy), &wm_name);
-
     if (DEBUG) { lll("=== SESSION"); }
     XSetErrorHandler(error_handler);
 

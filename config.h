@@ -2,7 +2,7 @@
 
 #define DEBUG 1
 
-#define BAR_HEIGHT 15
+#define BAR_HEIGHT 0
 #define BAR_BACKGROUND 0xbbbbbb
 #define BAR_TEXT 0x101010
 #define BAR_BORDER 0xaaaaaa
