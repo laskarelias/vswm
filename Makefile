@@ -1,10 +1,20 @@
 PREFIX?=/usr/X11R6
 CFLAGS?=-pedantic -Wall -O3
+DISPLAY=:1
 
 all:
-	$(CC) $(CFLAGS) -I$(PREFIX)/include vswm.c -L$(PREFIX)/lib -lX11 -o vswm
-	cp vswm /usr/games
+	g++ $(CFLAGS) -I$(PREFIX)/include *.cpp -L$(PREFIX)/lib -lX11 -o vswm 
 
 clean:
-	rm -f vswm
+	pkill vswm || true
+	pkill xterm || true
+	pkill xclock || true
+	rm -f vswm log.txt
 
+run:
+	pkill vswm || true
+	pkill xterm || true
+	pkill xclock || true
+	./vswm &
+	xterm &
+	xclock &
