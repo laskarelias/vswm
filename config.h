@@ -1,4 +1,7 @@
-#pragma once
+#define ctrl ControlMask
+#define alt Mod1Mask
+#define super Mod4Mask
+#define shift ShiftMask
 
 #define BORDER_WIDTH 4
 #define BORDER_ACTIVE 0x008080
@@ -6,3 +9,8 @@
 
 #define TITLEBAR_HEIGHT 18
 #define TITLEBAR_ACTIVE 0x707070
+
+const key keys[] = {
+    { super, "c",   close,  0},
+    { super, "z",   info,   0},
+};
