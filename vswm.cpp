@@ -23,6 +23,10 @@ void lll(std::string s) {
     log.close();
 }
 
+int error_handler(Display* dpy, XErrorEvent* ev) {
+    return 0;
+}
+
 void init_handlers() {
     handler[MapRequest]       = mapreq;
     handler[ConfigureRequest] = configurereq;
@@ -53,10 +57,10 @@ void mapreq(Display* dpy, XEvent ev) {
         }
     }
     XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask | PropertyChangeMask);
-    XSetWindowBorderWidth(dpy, ev.xmaprequest.window, 4);
+    // XSetWindowBorderWidth(dpy, ev.xmaprequest.window, 4);
     XMapWindow(dpy, ev.xmaprequest.window);
     //xgetgeometry trolling
-    if (!found) { lll("NOT found window"); winlist.push_back(vswin(ev.xmaprequest.window, attr.x, attr.y, attr.width, attr.height)); lll("added new");}
+    if (!found) { lll("NOT found window"); winlist.push_back(vswin(dpy, ev.xmaprequest.window, attr.x, attr.y, attr.width, attr.height)); lll("added new");}
     XSetInputFocus(dpy, ev.xmaprequest.window, RevertToParent, CurrentTime);
 }
 
@@ -80,7 +84,7 @@ void focusout(Display* dpy, XEvent ev) {
         if (i.wid == ev.xfocus.window) {
             // VAIOS FOCUS IN
             lll("unfocused window");
-            XSetWindowBorder(dpy, i.wid, 0x004040);
+            // XSetWindowBorder(dpy, i.wid, 0x004040);
             i.focus();
         }
     }
@@ -89,6 +93,7 @@ void focusout(Display* dpy, XEvent ev) {
 int main(void) {
     
     if(!(dpy = XOpenDisplay(0x0))) return 1;
+    XSetErrorHandler(error_handler);
     XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask | PropertyChangeMask);
     init_handlers();
     for(;;)

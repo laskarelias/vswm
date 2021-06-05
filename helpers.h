@@ -7,10 +7,11 @@ class vswin {
         int x, y;
         unsigned int w, h;
         bool a;
+        Window t;
 
-    vswin(Window wid, int x, int y, unsigned int w, unsigned int h);
-    void focus();
-    void unfocus();
+        vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned int h);
+        void focus();
+        void unfocus();
 
 };
 
