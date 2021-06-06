@@ -17,6 +17,11 @@ typedef struct mouse_struct {
     int arg; 
 } mouse;
 
+typedef struct title_button {
+    char text[4];
+    void (* function)(Display* dpy, XEvent ev, int arg);
+} title_button;
+
 class button;
 
 class vswin {
@@ -45,7 +50,7 @@ class button {
         vswin* p;
         void (* function) (Display* dpy, XEvent ev, int arg);
 
-        button(Display* dpy, vswin* p, void (* function)(Display* dpy, XEvent ev, int arg));
+        button(Display* dpy, vswin* p, int i, void (* function)(Display* dpy, XEvent ev, int arg));
 
         bool operator== (const button &b) { return (this->bid == b.bid); }
 };
@@ -62,6 +67,7 @@ void motionnot(Display* dpy, XEvent ev);
 void buttonrelease(Display* dpy, XEvent ev);
 
 void close(Display* dpy, XEvent ev, int arg);
+void maximize(Display* dpy, XEvent ev, int arg);
 void info(Display* dpy, XEvent ev, int arg);
 
 #endif

@@ -19,7 +19,8 @@ vswin::vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned in
     this->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), x, y, w, h + TITLEBAR_HEIGHT, 0, TITLEBAR_ACTIVE, TITLEBAR_ACTIVE);
     XSelectInput(dpy, t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
     XMapWindow(dpy, t);
-    b.push_back(button(dpy, this, close));
+    b.push_back(button(dpy, this, 0, close));
+    b.push_back(button(dpy, this, 1, maximize));
     XSetWindowBorderWidth(dpy, wid, 0);
     XSetWindowBorder(dpy, t, BORDER_ACTIVE);
     XSetWindowBorderWidth(dpy, t, BORDER_WIDTH);
@@ -71,8 +72,8 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
     }
 }
 
-button::button(Display* dpy, vswin* p, void (* function)(Display* dpy, XEvent ev, int arg)) {
-    this->bid = XCreateSimpleWindow(dpy, p->t, 2, 2, TITLEBAR_HEIGHT - 4, TITLEBAR_HEIGHT - 4, 1, 0x000000, BUTTON_COLOR);
+button::button(Display* dpy, vswin* p, int i, void (* function)(Display* dpy, XEvent ev, int arg)) {
+    this->bid = XCreateSimpleWindow(dpy, p->t, 2 + i * TITLEBAR_HEIGHT, 2, TITLEBAR_HEIGHT - 6, TITLEBAR_HEIGHT - 6, 1, 0x000000, BUTTON_COLOR);
     XMapWindow(dpy, bid);
     this->function = function; 
 }
@@ -80,6 +81,23 @@ button::button(Display* dpy, vswin* p, void (* function)(Display* dpy, XEvent ev
 void close(Display* dpy, XEvent ev, int arg) {
     if (active != nullptr) {
         active->destroy(dpy);
+    }
+    return;
+}
+
+void maximize(Display* dpy, XEvent ev, int arg) {
+    if (active != nullptr) {
+        XWindowAttributes attr;
+        XGetWindowAttributes(dpy, active->t, &attr);
+        if (attr.width == XDisplayWidth(dpy, DefaultScreen(dpy)) && attr.height == XDisplayHeight(dpy, DefaultScreen(dpy)) && attr.x == -BORDER_WIDTH && attr.y == -BORDER_WIDTH) { 
+            XMoveResizeWindow(dpy, active->t, active->x, active->y, active->w, active->h); 
+            XResizeWindow(dpy, active->wid, active->w, active->h - TITLEBAR_HEIGHT); 
+        }
+        else {
+            XMoveResizeWindow(dpy, active->t, 0, 0, XDisplayWidth(dpy, DefaultScreen(dpy)), XDisplayHeight(dpy, DefaultScreen(dpy)));
+            XResizeWindow(dpy, active->wid, XDisplayWidth(dpy, DefaultScreen(dpy)), XDisplayHeight(dpy, DefaultScreen(dpy)) - TITLEBAR_HEIGHT);
+            
+        }
     }
     return;
 }

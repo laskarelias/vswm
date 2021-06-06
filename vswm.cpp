@@ -154,6 +154,7 @@ void buttonpress(Display* dpy, XEvent ev) {
     }
     for (auto &i : active->b) {
         if (ev.xbutton.subwindow == i.bid) {
+            start.subwindow = None;
             i.function(dpy, ev, 0);
             return;
         }

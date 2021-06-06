@@ -19,3 +19,8 @@ const key keys[] = {
     { super, "c",   close,  0},
     { super, "z",   info,   0},
 };
+
+const title_button title_buttons[] {
+    { "X", close },
+    { "=", maximize }
+};
