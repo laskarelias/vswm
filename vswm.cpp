@@ -1,7 +1,17 @@
-/* TinyWM is written by Nick Welch <nick@incise.org> in 2005 & 2011.
+ 
+/*                         
+__   _______      ___ __ ___  
+\ \ / / __\ \ /\ / / '_ ` _ \ 
+ \ V /\__ \\ V  V /| | | | | |
+  \_/ |___/ \_/\_/ |_| |_| |_|
+*/
+
+/* VSWM - Very Small Window Manager
+ * VSWM - Very Simple Window Manager
  *
- * This software is in the public domain
- * and is provided AS IS, with NO WARRANTY. */
+ * Thanks - TinyWM
+ * Thanks - SOWM
+*/
 
 #include <iostream>
 #include <fstream>
@@ -10,19 +20,20 @@
 #include "helpers.h"
 #include "config.h"
 
-std::ofstream log;
+std::ofstream logfile;
 
 static Display* dpy;
 static XEvent ev;
 static void (*handler[LASTEvent])(Display*, XEvent) = { nullptr };
+static XButtonEvent start;
 vswin* active;
 
 std::list <vswin> winlist;
 
 void lll(std::string s) {
-    log.open("log.txt", std::ios_base::app);
-    log << s << std::endl;
-    log.close();
+    logfile.open("log.txt", std::ios_base::app);
+    logfile << s << std::endl;
+    logfile.close();
 }
 
 int error_handler(Display* dpy, XErrorEvent* ev) {
@@ -37,32 +48,39 @@ void init_handlers() {
     handler[FocusIn]          = focusin;
     handler[FocusOut]         = focusout;
     handler[KeyPress]         = key_handler;
+    handler[ButtonPress]      = buttonpress;
+    handler[MotionNotify]     = motionnot;
+    handler[ButtonRelease]    = buttonrelease;
 }
 
 void init_keys(Display* dpy) {
-    for (int i = 0; i < sizeof(keys) / sizeof(*keys); i++) { XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)), keys[i].modifiers, DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync); }
+    for (unsigned int i = 0; i < sizeof(keys) / sizeof(*keys); i++) { XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)), keys[i].modifiers, DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync); }
+    XGrabButton(dpy, 1, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    XGrabButton(dpy, 3, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
 }
 
 void key_handler(Display* dpy, XEvent ev) {
-    for (int i = 0; i < sizeof(keys) / sizeof(*keys); i++) {
+    for (unsigned int i = 0; i < sizeof(keys) / sizeof(*keys); i++) {
         if ((keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode)) { keys[i].function(dpy, ev, keys[i].arg); }
     }
 }
 
 void configurereq(Display* dpy, XEvent ev) {
+    lll("configurereq");
     XWindowChanges wc;
     wc.x = ev.xconfigurerequest.x;
     wc.y = ev.xconfigurerequest.y;
     wc.width = ev.xconfigurerequest.width;
     wc.height = ev.xconfigurerequest.height;
     XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &wc);
+    
 }
 
 void destroynot(Display* dpy, XEvent ev) {
+    lll("destroynot");
     for (auto &i : winlist) {
         if (ev.xdestroywindow.window == i.wid) {
             i.destroy(dpy);
-            winlist.remove(i);
             return;
         }
     }
@@ -81,6 +99,7 @@ void mapreq(Display* dpy, XEvent ev) {
             if (i.wid == ev.xmaprequest.window) { lll("found window"); found = true; }        
         }
     }
+    if (active != nullptr) { active->unfocus(dpy); }
     XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask | PropertyChangeMask);
     // XSetWindowBorderWidth(dpy, ev.xmaprequest.window, 4);
     XMapWindow(dpy, ev.xmaprequest.window);
@@ -90,6 +109,7 @@ void mapreq(Display* dpy, XEvent ev) {
 }
 
 void enternot(Display* dpy, XEvent ev) {
+    lll("enternot");
     for (auto &i : winlist) {
         if ((i.wid == ev.xcrossing.window) | (i.t == ev.xcrossing.window)) {
             XSetInputFocus(dpy, i.wid, RevertToParent, CurrentTime);
@@ -116,6 +136,49 @@ void focusout(Display* dpy, XEvent ev) {
     }
 }
 
+void buttonpress(Display* dpy, XEvent ev) {
+    lll("Button Press");
+    if (active == nullptr) { return; }
+    XRaiseWindow(dpy, active->t);
+    // XRaiseWindow(dpy, active->wid);
+    std::cout << ev.xbutton.window << " - " << ev.xbutton.subwindow << std::endl;
+    if ((ev.xbutton.window == active->t) && (ev.xbutton.subwindow == 0)) {
+        start = ev.xbutton;
+        start.subwindow = ev.xbutton.window;
+    }
+    if (ev.xbutton.subwindow == active->t) {
+        start = ev.xbutton;
+        start.subwindow = ev.xbutton.subwindow;
+    }
+    return;
+}
+
+void motionnot(Display* dpy, XEvent ev) {
+    lll("Motion Notify");
+    if (start.subwindow == None) { return; }
+    int dx = ev.xbutton.x_root - start.x_root;
+    int dy = ev.xbutton.y_root - start.y_root;
+    std::cout << "x" << dx << "y" << dy << std::endl;
+    active->move(dpy, start.button, dx, dy);
+    return;
+}
+
+void buttonrelease(Display* dpy, XEvent ev) {
+    lll("Button Release");
+    XWindowAttributes attr;
+    XGetWindowAttributes(dpy, active->t, &attr);
+    active->x = attr.x;
+    active->y = attr.y;
+    active->w = attr.width;
+    active->h = attr.height - TITLEBAR_HEIGHT;
+    start.subwindow = None;
+    if (ev.xbutton.button == 2) {
+        if (active != nullptr) { active->destroy(dpy); }
+    }
+}
+
+
+
 int main(void) {
     
     if(!(dpy = XOpenDisplay(0x0))) return 1;
@@ -127,8 +190,6 @@ int main(void) {
     {
         XNextEvent(dpy, &ev);
         lll("ev");
-        XGrabServer(dpy);
         if (handler[ev.type] != nullptr) { handler[ev.type](dpy, ev); }
-        XUngrabServer(dpy);
     }
 }

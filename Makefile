@@ -20,3 +20,6 @@ run:
 	./vswm &
 	xterm &
 	xclock -geometry 200x200+200+400 &
+
+install: all
+	sudo cp vswm /usr/games/vswm

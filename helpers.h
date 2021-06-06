@@ -4,11 +4,18 @@
 #define HELPERS_H
 
 typedef struct key_struct {
-    int modifiers;
+    unsigned int modifiers;
     char key[8];
     void (* function)(Display* dpy, XEvent ev, int arg);
     int arg; 
 } key;
+
+typedef struct mouse_struct {
+    unsigned int modifiers;
+    int btn;
+    void (* function)(Display* dpy, XEvent ev, int arg);
+    int arg; 
+} mouse;
 
 class vswin {
     public:
@@ -22,8 +29,23 @@ class vswin {
         void destroy(Display* dpy);
         void focus(Display* dpy);
         void unfocus(Display* dpy);
+        void move(Display* dpy, int btn, int x, int y);
 
         bool operator== (const vswin &b) { return (this->wid == b.wid); }
+};
+
+class button {
+    public:
+        Window bid;
+        int x;
+        unsigned int w;
+        vswin* p;
+        std::string t;
+        void (* function) (Display* dpy, XEvent ev, int arg);
+
+        button(Display* dpy, Window wid, vswin* p, void (* function));
+
+        bool operator== (const button &b) { return (this->bid == b.bid); }
 };
 
 void configurereq(Display* dpy, XEvent ev);
@@ -33,6 +55,9 @@ void enternot(Display* dpy, XEvent ev);
 void focusin(Display* dpy, XEvent ev);
 void focusout(Display* dpy, XEvent ev);
 void key_handler(Display* dpy, XEvent ev);
+void buttonpress(Display* dpy, XEvent ev);
+void motionnot(Display* dpy, XEvent ev);
+void buttonrelease(Display* dpy, XEvent ev);
 
 void close(Display* dpy, XEvent ev, int arg);
 void info(Display* dpy, XEvent ev, int arg);
