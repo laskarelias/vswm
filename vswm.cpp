@@ -145,11 +145,20 @@ void buttonpress(Display* dpy, XEvent ev) {
     if ((ev.xbutton.window == active->t) && (ev.xbutton.subwindow == 0)) {
         start = ev.xbutton;
         start.subwindow = ev.xbutton.window;
+        return;
     }
     if (ev.xbutton.subwindow == active->t) {
         start = ev.xbutton;
         start.subwindow = ev.xbutton.subwindow;
+        return;
     }
+    for (auto &i : active->b) {
+        if (ev.xbutton.subwindow == i.bid) {
+            i.function(dpy, ev, 0);
+            return;
+        }
+    }
+    
     return;
 }
 

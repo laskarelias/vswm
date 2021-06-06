@@ -19,6 +19,7 @@ vswin::vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned in
     this->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), x, y, w, h + TITLEBAR_HEIGHT, 0, TITLEBAR_ACTIVE, TITLEBAR_ACTIVE);
     XSelectInput(dpy, t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
     XMapWindow(dpy, t);
+    b.push_back(button(dpy, this, close));
     XSetWindowBorderWidth(dpy, wid, 0);
     XSetWindowBorder(dpy, t, BORDER_ACTIVE);
     XSetWindowBorderWidth(dpy, t, BORDER_WIDTH);
@@ -68,6 +69,12 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
         default:
             break;
     }
+}
+
+button::button(Display* dpy, vswin* p, void (* function)(Display* dpy, XEvent ev, int arg)) {
+    this->bid = XCreateSimpleWindow(dpy, p->t, 2, 2, TITLEBAR_HEIGHT - 4, TITLEBAR_HEIGHT - 4, 1, 0x000000, BUTTON_COLOR);
+    XMapWindow(dpy, bid);
+    this->function = function; 
 }
 
 void close(Display* dpy, XEvent ev, int arg) {

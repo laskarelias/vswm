@@ -17,6 +17,8 @@ typedef struct mouse_struct {
     int arg; 
 } mouse;
 
+class button;
+
 class vswin {
     public:
         Window wid;
@@ -24,6 +26,7 @@ class vswin {
         unsigned int w, h;
         bool a;
         Window t;
+        std::list<button> b;
 
         vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned int h);
         void destroy(Display* dpy);
@@ -40,10 +43,9 @@ class button {
         int x;
         unsigned int w;
         vswin* p;
-        std::string t;
         void (* function) (Display* dpy, XEvent ev, int arg);
 
-        button(Display* dpy, Window wid, vswin* p, void (* function));
+        button(Display* dpy, vswin* p, void (* function)(Display* dpy, XEvent ev, int arg));
 
         bool operator== (const button &b) { return (this->bid == b.bid); }
 };

@@ -13,6 +13,8 @@
 #define TITLEBAR_ACTIVE 0x007070
 #define TITLEBAR_INACTIVE 0x002020
 
+#define BUTTON_COLOR 0x00A0A0
+
 const key keys[] = {
     { super, "c",   close,  0},
     { super, "z",   info,   0},
