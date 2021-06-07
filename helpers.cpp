@@ -73,9 +73,24 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
 }
 
 button::button(Display* dpy, vswin* p, int i, void (* function)(Display* dpy, XEvent ev, int arg)) {
-    this->bid = XCreateSimpleWindow(dpy, p->t, 2 + i * TITLEBAR_HEIGHT, 2, TITLEBAR_HEIGHT - 6, TITLEBAR_HEIGHT - 6, 1, 0x000000, BUTTON_COLOR);
+    XGCValues gcv;
+    this->bid = XCreateSimpleWindow(dpy, p->t, 2 + i * TITLEBAR_HEIGHT, 2, TITLEBAR_HEIGHT - 6, TITLEBAR_HEIGHT - 6, 0, 0xFF0000, 0x000000);
     XMapWindow(dpy, bid);
+    this->bgc = XCreateGC(dpy, bid, 0, 0);    
+    this->decorate(dpy);
     this->function = function; 
+}
+
+void button::decorate(Display* dpy) {
+    XGCValues gcv;
+    XClearWindow(dpy, bid);
+    XSetForeground(dpy, bgc, 0xFFFFFF);
+    XSetFillStyle(dpy, bgc, FillSolid);
+    XFillRectangle(dpy, bid, bgc, 0, 0, TITLEBAR_HEIGHT-7, TITLEBAR_HEIGHT-7);
+    XSetForeground(dpy, bgc, 0x828282);
+    XFillRectangle(dpy, bid, bgc, 1, 1, TITLEBAR_HEIGHT-8, TITLEBAR_HEIGHT-8);
+    XSetForeground(dpy, bgc, 0xC3C3C3);
+    XFillRectangle(dpy, bid, bgc, 1, 1, TITLEBAR_HEIGHT-9, TITLEBAR_HEIGHT-9);
 }
 
 void close(Display* dpy, XEvent ev, int arg) {

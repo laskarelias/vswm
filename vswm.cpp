@@ -47,6 +47,7 @@ void init_handlers() {
     handler[EnterNotify]      = enternot;
     handler[FocusIn]          = focusin;
     handler[FocusOut]         = focusout;
+    handler[Expose]           = expose;
     handler[KeyPress]         = key_handler;
     handler[ButtonPress]      = buttonpress;
     handler[MotionNotify]     = motionnot;
@@ -134,6 +135,18 @@ void focusout(Display* dpy, XEvent ev) {
             i.unfocus(dpy);
         }
     }
+}
+
+void expose(Display* dpy, XEvent ev) {
+    for (auto &i : winlist) {
+        if (ev.xexpose.window == i.t) {
+            for (auto &j : i.b) {
+                j.decorate(dpy);
+            }
+            return;
+        }
+    }
+    return;
 }
 
 void buttonpress(Display* dpy, XEvent ev) {

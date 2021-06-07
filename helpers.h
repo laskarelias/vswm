@@ -47,10 +47,12 @@ class button {
         Window bid;
         int x;
         unsigned int w;
+        GC bgc;
         vswin* p;
         void (* function) (Display* dpy, XEvent ev, int arg);
 
         button(Display* dpy, vswin* p, int i, void (* function)(Display* dpy, XEvent ev, int arg));
+        void decorate(Display* dpy);
 
         bool operator== (const button &b) { return (this->bid == b.bid); }
 };
@@ -61,6 +63,7 @@ void destroynot(Display* dpy, XEvent ev);
 void enternot(Display* dpy, XEvent ev);
 void focusin(Display* dpy, XEvent ev);
 void focusout(Display* dpy, XEvent ev);
+void expose(Display* dpy, XEvent ev);
 void key_handler(Display* dpy, XEvent ev);
 void buttonpress(Display* dpy, XEvent ev);
 void motionnot(Display* dpy, XEvent ev);
