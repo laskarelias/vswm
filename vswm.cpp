@@ -16,6 +16,8 @@ __   _______      ___ __ ___
 #include <iostream>
 #include <fstream>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xatom.h>
 #include <list>
 #include "helpers.h"
 #include "config.h"
@@ -52,6 +54,7 @@ void init_handlers() {
     handler[ButtonPress]      = buttonpress;
     handler[MotionNotify]     = motionnot;
     handler[ButtonRelease]    = buttonrelease;
+    handler[PropertyNotify]   = propertynot;
 }
 
 void init_keys(Display* dpy) {
@@ -142,6 +145,7 @@ void expose(Display* dpy, XEvent ev) {
         if (ev.xexpose.window == i.t) {
             for (auto &j : i.b) {
                 j.decorate(dpy);
+                j.text(dpy);
             }
             return;
         }
@@ -167,8 +171,12 @@ void buttonpress(Display* dpy, XEvent ev) {
     }
     for (auto &i : active->b) {
         if (ev.xbutton.subwindow == i.bid) {
-            start.subwindow = None;
-            i.function(dpy, ev, 0);
+            if (i.bid == active->b.back().bid) { 
+                    start = ev.xbutton;
+                    start.subwindow = ev.xbutton.subwindow; } else { 
+                start.subwindow = None;
+                i.function(dpy, ev, 0);
+            }
             return;
         }
     }
@@ -181,8 +189,8 @@ void motionnot(Display* dpy, XEvent ev) {
     if (start.subwindow == None) { return; }
     int dx = ev.xbutton.x_root - start.x_root;
     int dy = ev.xbutton.y_root - start.y_root;
-    std::cout << "x" << dx << "y" << dy << std::endl;
     active->move(dpy, start.button, dx, dy);
+    
     return;
 }
 
@@ -194,12 +202,26 @@ void buttonrelease(Display* dpy, XEvent ev) {
     active->y = attr.y;
     active->w = attr.width;
     active->h = attr.height - TITLEBAR_HEIGHT;
+    //active->b.back().w += ev.xbutton.x_root - start.x_root;
     start.subwindow = None;
+    // int dx = ev.xbutton.x_root - start.x_root;
+    // int dy = ev.xbutton.y_root - start.y_root;
+    // active->move(dpy, start.button, dx, dy);
     if (ev.xbutton.button == 2) {
         if (active != nullptr) { active->destroy(dpy); }
     }
 }
 
+void propertynot(Display* dpy, XEvent ev) {
+    lll("Property Not");
+    for (auto &i : winlist) {
+        if (i.wid == ev.xproperty.window) {
+            if (ev.xproperty.atom == XA_WM_NAME) {
+                i.title(dpy);
+            }
+        }
+    }
+}
 
 
 int main(void) {

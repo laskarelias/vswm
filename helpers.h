@@ -31,6 +31,7 @@ class vswin {
         unsigned int w, h;
         bool a;
         Window t;
+        char* name;
         std::list<button> b;
 
         vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned int h);
@@ -38,6 +39,8 @@ class vswin {
         void focus(Display* dpy);
         void unfocus(Display* dpy);
         void move(Display* dpy, int btn, int x, int y);
+        void title(Display* dpy);
+
 
         bool operator== (const vswin &b) { return (this->wid == b.wid); }
 };
@@ -45,16 +48,25 @@ class vswin {
 class button {
     public:
         Window bid;
-        int x;
-        unsigned int w;
+        int x, y;
+        unsigned int w, h;
+        int index;
+        char* txt;
         GC bgc;
         vswin* p;
         void (* function) (Display* dpy, XEvent ev, int arg);
 
-        button(Display* dpy, vswin* p, int i, void (* function)(Display* dpy, XEvent ev, int arg));
+        button(Display* dpy, vswin* p, int x, int y, unsigned int w, unsigned int h, int i, char* txt, void (* function)(Display* dpy, XEvent ev, int arg));
         void decorate(Display* dpy);
+        void text(Display* dpy);
+
 
         bool operator== (const button &b) { return (this->bid == b.bid); }
+};
+
+class bar {
+    int x, y;
+    unsigned int w, h;
 };
 
 void configurereq(Display* dpy, XEvent ev);
@@ -68,9 +80,12 @@ void key_handler(Display* dpy, XEvent ev);
 void buttonpress(Display* dpy, XEvent ev);
 void motionnot(Display* dpy, XEvent ev);
 void buttonrelease(Display* dpy, XEvent ev);
+void propertynot(Display* dpy, XEvent ev);
 
 void close(Display* dpy, XEvent ev, int arg);
 void maximize(Display* dpy, XEvent ev, int arg);
+void minimize(Display* dpy, XEvent ev, int arg);
 void info(Display* dpy, XEvent ev, int arg);
+void nothing(Display* dpy, XEvent ev, int arg);
 
 #endif
