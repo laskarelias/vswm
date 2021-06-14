@@ -22,11 +22,11 @@ vswin::vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned in
     this->t = XCreateSimpleWindow(dpy, DefaultRootWindow(dpy), x, y, w + INNER_BORDER_WIDTH * 2, h + TITLEBAR_HEIGHT + INNER_BORDER_WIDTH * 2, BORDER_WIDTH, TITLEBAR_ACTIVE, TITLEBAR_ACTIVE);
     XSelectInput(dpy, t, EnterWindowMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | ExposureMask);
     XMapWindow(dpy, t);
-    unsigned int i;
-    for (i = 0; i < sizeof(title_buttons) / sizeof(*title_buttons); i++) {
-        b.push_back(button(dpy, this, 2 + i * (BUTTON_WIDTH + BUTTON_SPACING), 2, BUTTON_WIDTH, BUTTON_HEIGHT, (int)i, (char *)(title_buttons[i].text), title_buttons[i].function));
+    unsigned int i = 0;
+    if (TITLEBAR_BUTTONS) {
+        for (i = 0; i < sizeof(title_buttons) / sizeof(*title_buttons); i++) { b.push_back(button(dpy, this, 2 + i * (BUTTON_WIDTH + BUTTON_SPACING), 2, BUTTON_WIDTH, BUTTON_HEIGHT, (int)i, (char *)(title_buttons[i].text), title_buttons[i].function)); }
     }
-    b.push_back(button(dpy, this, 2 + i * (BUTTON_WIDTH + BUTTON_SPACING), 2, w - i * (BUTTON_WIDTH + BUTTON_SPACING) - BUTTON_SPACING, BUTTON_HEIGHT, (int)i, "", nothing));
+    if (TITLEBAR_NAME) { b.push_back(button(dpy, this, 2 + i * (BUTTON_WIDTH + BUTTON_SPACING), 2, w - i * (BUTTON_WIDTH + BUTTON_SPACING) + (INNER_BORDER_WIDTH * 2) - 6, BUTTON_HEIGHT, (int)i, "", nothing)); }
     
     title(dpy);
     XSetWindowBorder(dpy, wid, INNER_BORDER_ACTIVE);
@@ -36,6 +36,7 @@ vswin::vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned in
 }
 
 void vswin::destroy(Display* dpy) {
+    XGrabServer(dpy);
     winlist.remove(*this);
     XUnmapWindow(dpy, t);
     XSelectInput(dpy, wid, NoEventMask);
@@ -46,12 +47,14 @@ void vswin::destroy(Display* dpy) {
     } else {
         active = nullptr;
     }
+    XUngrabServer(dpy);
     return;
 }
 
 void vswin::focus(Display* dpy) {
     active = this;
     XSetWindowBorder(dpy, t, BORDER_ACTIVE);
+    XSetWindowBorder(dpy, wid, INNER_BORDER_ACTIVE);
     XSetWindowBackground(dpy, t, TITLEBAR_ACTIVE);
     XClearWindow(dpy, t);
     return;
@@ -60,6 +63,7 @@ void vswin::focus(Display* dpy) {
 void vswin::unfocus(Display* dpy) {
     this->a = false;
     XSetWindowBorder(dpy, t, BORDER_INACTIVE);
+    XSetWindowBorder(dpy, wid, INNER_BORDER_INACTIVE);
     XSetWindowBackground(dpy, t, TITLEBAR_INACTIVE);
     XClearWindow(dpy, t);
     return;
@@ -72,8 +76,8 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
             XMoveWindow(dpy, t, this->x + x, this->y + y);
             break;
         case 3:
-            XResizeWindow(dpy, t, this->w + x, this->h + y);
-            XResizeWindow(dpy, b.back().bid, b.back().w + x, b.back().h);
+            XResizeWindow(dpy, t, this->w + x + INNER_BORDER_WIDTH * 2, this->h + y + INNER_BORDER_WIDTH * 2);
+            if (TITLEBAR_NAME) { XResizeWindow(dpy, b.back().bid, this->b.back().w + x, b.back().h); }
             XResizeWindow(dpy, wid, this->w + x, this->h + y - TITLEBAR_HEIGHT);
             break;
         default:
@@ -85,8 +89,10 @@ void vswin::title(Display* dpy) {
     XTextProperty xtp;
     if (!(XGetWMName(dpy, wid, &xtp))) { xtp.value = (unsigned char *)"?"; }
     this->name = (char *)xtp.value;
-    b.back().txt = name;
-    b.back().text(dpy);
+    if (TITLEBAR_NAME) {
+        b.back().txt = name; 
+        b.back().text(dpy); 
+    }
     return;
 }
 

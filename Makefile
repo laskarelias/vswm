@@ -18,8 +18,11 @@ run:
 	@pkill xterm || true
 	@pkill xclock || true
 	@./vswm &
+	@sxhkd &
 	@xterm &
 	@xclock -geometry 200x200+200+400 &
+	@xsetroot -solid darkslategray
+
 
 install: all
 	sudo cp vswm /usr/games/vswm

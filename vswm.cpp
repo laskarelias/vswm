@@ -142,7 +142,7 @@ void focusout(Display* dpy, XEvent ev) {
 
 void expose(Display* dpy, XEvent ev) {
     for (auto &i : winlist) {
-        if (ev.xexpose.window == i.t) {
+        if (ev.xexpose.window == i.t && (TITLEBAR_BUTTONS || TITLEBAR_NAME)) {
             for (auto &j : i.b) {
                 j.decorate(dpy);
                 j.text(dpy);
@@ -158,7 +158,6 @@ void buttonpress(Display* dpy, XEvent ev) {
     if (active == nullptr) { return; }
     XRaiseWindow(dpy, active->t);
     // XRaiseWindow(dpy, active->wid);
-    std::cout << ev.xbutton.window << " - " << ev.xbutton.subwindow << std::endl;
     if ((ev.xbutton.window == active->t) && (ev.xbutton.subwindow == 0)) {
         start = ev.xbutton;
         start.subwindow = ev.xbutton.window;
@@ -171,21 +170,22 @@ void buttonpress(Display* dpy, XEvent ev) {
     }
     for (auto &i : active->b) {
         if (ev.xbutton.subwindow == i.bid) {
-            if (i.bid == active->b.back().bid) { 
-                    start = ev.xbutton;
-                    start.subwindow = ev.xbutton.subwindow; } else { 
+            if (i.bid == active->b.back().bid && TITLEBAR_NAME) { 
+                start = ev.xbutton;
+                start.subwindow = ev.xbutton.subwindow;
+            } else if (TITLEBAR_BUTTONS) { 
                 start.subwindow = None;
                 i.function(dpy, ev, 0);
             }
             return;
         }
     }
-    
     return;
 }
 
 void motionnot(Display* dpy, XEvent ev) {
     lll("Motion Notify");
+    while(XCheckTypedEvent(dpy, MotionNotify, &ev));
     if (start.subwindow == None) { return; }
     int dx = ev.xbutton.x_root - start.x_root;
     int dy = ev.xbutton.y_root - start.y_root;
@@ -202,7 +202,10 @@ void buttonrelease(Display* dpy, XEvent ev) {
     active->y = attr.y;
     active->w = attr.width;
     active->h = attr.height - TITLEBAR_HEIGHT;
-    //active->b.back().w += ev.xbutton.x_root - start.x_root;
+    if (TITLEBAR_NAME) { 
+        XGetWindowAttributes(dpy, active->b.back().bid, &attr);
+        active->b.back().w = attr.width;
+    }
     start.subwindow = None;
     // int dx = ev.xbutton.x_root - start.x_root;
     // int dy = ev.xbutton.y_root - start.y_root;

@@ -1,5 +1,10 @@
 #pragma once
 
+#define ctrl ControlMask
+#define alt Mod1Mask
+#define super Mod4Mask
+#define shift ShiftMask
+
 #ifndef HELPERS_H
 #define HELPERS_H
 
