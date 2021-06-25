@@ -105,7 +105,6 @@ void mapreq(Display* dpy, XEvent ev) {
     }
     if (active != nullptr) { active->unfocus(dpy); }
     XSelectInput(dpy, ev.xmaprequest.window, StructureNotifyMask | EnterWindowMask | FocusChangeMask | PropertyChangeMask);
-    // XSetWindowBorderWidth(dpy, ev.xmaprequest.window, 4);
     XMapWindow(dpy, ev.xmaprequest.window);
     //xgetgeometry trolling
     if (!found) { lll("NOT found window"); winlist.push_back(vswin(dpy, ev.xmaprequest.window, attr.x, attr.y, attr.width, attr.height)); lll("added new");}

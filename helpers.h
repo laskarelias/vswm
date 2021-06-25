@@ -60,6 +60,7 @@ class button {
         Window bid;
         int x, y;
         unsigned int w, h;
+        bool t;
         int index;
         char* txt;
         GC bgc;
