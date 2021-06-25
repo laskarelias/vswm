@@ -21,7 +21,7 @@ run:
 	@sxhkd &
 	@xterm &
 	@xclock -geometry 200x200+200+400 &
-	@xsetroot -solid darkslategray
+	@hsetroot -add "#000000" -add "a0a0a0" -gradient 0
 
 
 install: all

@@ -5,6 +5,9 @@
 #define super Mod4Mask
 #define shift ShiftMask
 
+enum {no, yes, left = 1, center, right};
+enum {top = 1, bottom};
+
 #ifndef HELPERS_H
 #define HELPERS_H
 
@@ -41,10 +44,12 @@ class vswin {
 
         vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned int h);
         void destroy(Display* dpy);
+        void unmap(Display* dpy);
         void focus(Display* dpy);
         void unfocus(Display* dpy);
         void move(Display* dpy, int btn, int x, int y);
         void title(Display* dpy);
+        void icon(Display* dpy);
 
 
         bool operator== (const vswin &b) { return (this->wid == b.wid); }
@@ -91,6 +96,7 @@ void close(Display* dpy, XEvent ev, int arg);
 void maximize(Display* dpy, XEvent ev, int arg);
 void minimize(Display* dpy, XEvent ev, int arg);
 void info(Display* dpy, XEvent ev, int arg);
+void iconify(Display* dpy, XEvent ev, int arg);
 void nothing(Display* dpy, XEvent ev, int arg);
 
 #endif
