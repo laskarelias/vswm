@@ -189,7 +189,6 @@ void motionnot(Display* dpy, XEvent ev) {
     int dx = ev.xbutton.x_root - start.x_root;
     int dy = ev.xbutton.y_root - start.y_root;
     active->move(dpy, start.button, dx, dy);
-    
     return;
 }
 

@@ -103,9 +103,9 @@ vswin::vswin(Display* dpy, Window wid, int x, int y, unsigned int w, unsigned in
 void vswin::destroy(Display* dpy) {
     XGrabServer(dpy);
     winlist.remove(*this);
-    XUnmapWindow(dpy, t);
     XSelectInput(dpy, wid, NoEventMask);
     XSelectInput(dpy, t, NoEventMask);
+    XUnmapWindow(dpy, t);
     XKillClient(dpy, wid);
     if (winlist.size() > 0) { 
         winlist.back().focus(dpy); 
@@ -181,20 +181,39 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
             break;
         case 3:
             XResizeWindow(dpy, t, 
-                this->w + x + INNER_BORDER_WIDTH * 2, 
-                this->h + y + INNER_BORDER_WIDTH * 2);
-            if (TITLEBAR_NAME) { 
-                XResizeWindow(dpy, b.back().bid, 
-                    this->b.back().w + x, 
+                this->w + x, 
+                this->h + y);
+            if (TITLEBAR_NAME) {
+                switch (TITLEBAR_NAME) {
+                case center:
+                    XMoveResizeWindow(dpy, b.back().bid, 
+                    b.back().x + (x/2), b.back().y,
+                    b.back().w + x, 
+                    b.back().h);                    
+                    break;
+                case left:
+                    XResizeWindow(dpy, b.back().bid, 
+                    b.back().w + x, 
+                    b.back().h);
+                    break;
+                case right:
+                    XMoveResizeWindow(dpy, b.back().bid, 
+                    b.back().x + x, b.back().y,
+                    b.back().w + x, 
                     b.back().h); 
+                    break;
+                default:
+                    break;
+                }
             }
             XResizeWindow(dpy, wid, 
-                this->w + x, 
-                this->h + y - TITLEBAR_HEIGHT);
+                this->w + x - 2 * FRAME_WIDTH - 2 * INNER_BORDER_WIDTH, 
+                this->h + y - TITLEBAR_HEIGHT - 2 * FRAME_WIDTH - 2 * INNER_BORDER_WIDTH);
             break;
         default:
             break;
     }
+
 }
 
 void vswin::title(Display* dpy) {
@@ -247,7 +266,7 @@ void button::decorate(Display* dpy) {
     // XFillRectangle(dpy, bid, bgc, 1, 1, BUTTON_HEIGHT-2, BUTTON_HEIGHT-2);
     // XSetForeground(dpy, bgc, 0xC0C0C0);
     // XFillRectangle(dpy, bid, bgc, 2, 2, BUTTON_HEIGHT-3, BUTTON_HEIGHT-3);
-    return;
+    // return;
 }
 
 void button::text(Display* dpy) {
