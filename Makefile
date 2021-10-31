@@ -1,4 +1,3 @@
-
 PREFIX?=/usr/X11R6
 CFLAGS?=-pedantic -Wall -O3
 DISPLAY=:1
@@ -17,11 +16,12 @@ run:
 	@pkill vswm || true
 	@pkill xterm || true
 	@pkill xclock || true
-	@./vswm &
+	@pkill sxhkd || true
 	@sxhkd &
+	@./vswm &
 	@xterm &
 	@xclock -geometry 200x200+200+400 &
-	@hsetroot -add "#000000" -add "a0a0a0" -gradient 0
+	@hsetroot -add "#000000" -add "#a0a0a0" -gradient 0
 
 
 install: all

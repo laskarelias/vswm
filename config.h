@@ -1,6 +1,7 @@
 #define MOVE_KEY super
 
-#define TEXT_FONT "-*-terminus-bold-r-normal-*-14-*-*-*-*-*-*-*"
+// #define TEXT_FONT "-*-terminus-bold-r-normal-*-14-*-*-*-*-*-*-*"
+#define TEXT_FONT "fixed"
 #define TEXT_ACTIVE 0x000000
 #define TEXT_INACTIVE 0x606060
 

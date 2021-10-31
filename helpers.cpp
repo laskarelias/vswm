@@ -182,8 +182,8 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
         case 3:
             XResizeWindow(dpy, t, 
                 this->w + x, 
-                this->h + y);
-            if (TITLEBAR_NAME) {
+                this->h + y + TITLEBAR_HEIGHT);
+            if (TITLEBAR_NAME > 0) {
                 switch (TITLEBAR_NAME) {
                 case center:
                     XMoveResizeWindow(dpy, b.back().bid, 
@@ -208,7 +208,7 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
             }
             XResizeWindow(dpy, wid, 
                 this->w + x - 2 * FRAME_WIDTH - 2 * INNER_BORDER_WIDTH, 
-                this->h + y - TITLEBAR_HEIGHT - 2 * FRAME_WIDTH - 2 * INNER_BORDER_WIDTH);
+                this->h + y - 2 * FRAME_WIDTH - 2 * INNER_BORDER_WIDTH);
             break;
         default:
             break;
