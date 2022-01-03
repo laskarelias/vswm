@@ -36,9 +36,11 @@ void lll(std::string s) {
     logfile.open("log.txt", std::ios_base::app);
     logfile << s << std::endl;
     logfile.close();
+    return;
 }
 
 int error_handler(Display* dpy, XErrorEvent* ev) {
+    printf("ERRRRRORRR\n");
     return 0;
 }
 
@@ -61,12 +63,14 @@ void init_keys(Display* dpy) {
     for (unsigned int i = 0; i < sizeof(keys) / sizeof(*keys); i++) { XGrabKey(dpy, XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)), keys[i].modifiers, DefaultRootWindow(dpy), True, GrabModeAsync, GrabModeAsync); }
     XGrabButton(dpy, 1, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
     XGrabButton(dpy, 3, MOVE_KEY, DefaultRootWindow(dpy), True, ButtonPressMask | ButtonReleaseMask | PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None);
+    return;
 }
 
 void key_handler(Display* dpy, XEvent ev) {
     for (unsigned int i = 0; i < sizeof(keys) / sizeof(*keys); i++) {
         if ((keys[i].modifiers == ev.xkey.state) && (XKeysymToKeycode(dpy, XStringToKeysym(keys[i].key)) == ev.xkey.keycode)) { keys[i].function(dpy, ev, keys[i].arg); }
     }
+    return;
 }
 
 void configurereq(Display* dpy, XEvent ev) {
@@ -77,6 +81,7 @@ void configurereq(Display* dpy, XEvent ev) {
     wc.width = ev.xconfigurerequest.width;
     wc.height = ev.xconfigurerequest.height;
     XConfigureWindow(dpy, ev.xconfigurerequest.window, ev.xconfigurerequest.value_mask, &wc);
+    return;
     
 }
 
@@ -84,7 +89,10 @@ void destroynot(Display* dpy, XEvent ev) {
     lll("destroynot");
     for (auto &i : winlist) {
         if (ev.xdestroywindow.window == i.wid) {
-            i.destroy(dpy);
+            printf("destr\n");
+            active = &i;
+            close(dpy, ev, 0);
+            printf("destroy2\n");
             return;
         }
     }
@@ -109,6 +117,7 @@ void mapreq(Display* dpy, XEvent ev) {
     //xgetgeometry trolling
     if (!found) { lll("NOT found window"); winlist.push_back(vswin(dpy, ev.xmaprequest.window, attr.x, attr.y, attr.width, attr.height)); lll("added new");}
     XSetInputFocus(dpy, ev.xmaprequest.window, RevertToParent, CurrentTime);
+    return;
 }
 
 void enternot(Display* dpy, XEvent ev) {
@@ -118,7 +127,7 @@ void enternot(Display* dpy, XEvent ev) {
             XSetInputFocus(dpy, i.wid, RevertToParent, CurrentTime);
         }
     }
-    
+    return;
 }
 
 void focusin(Display* dpy, XEvent ev) {
@@ -128,6 +137,7 @@ void focusin(Display* dpy, XEvent ev) {
             i.focus(dpy);
         }
     }
+    return;
 }
 
 void focusout(Display* dpy, XEvent ev) {
@@ -137,9 +147,11 @@ void focusout(Display* dpy, XEvent ev) {
             i.unfocus(dpy);
         }
     }
+    return;
 }
 
 void expose(Display* dpy, XEvent ev) {
+    if (winlist.empty()) { return; }
     for (auto &i : winlist) {
         if (ev.xexpose.window == i.t && (TITLEBAR_BUTTONS || TITLEBAR_NAME)) {
             for (auto &j : i.b) {
@@ -184,7 +196,7 @@ void buttonpress(Display* dpy, XEvent ev) {
 
 void motionnot(Display* dpy, XEvent ev) {
     lll("Motion Notify");
-    while(XCheckTypedEvent(dpy, MotionNotify, &ev));
+    //while(XCheckTypedEvent(dpy, MotionNotify, &ev));
     if (start.subwindow == None) { return; }
     int dx = ev.xbutton.x_root - start.x_root;
     int dy = ev.xbutton.y_root - start.y_root;
@@ -211,6 +223,11 @@ void buttonrelease(Display* dpy, XEvent ev) {
     if (ev.xbutton.button == 2) {
         if (active != nullptr) { active->destroy(dpy); }
     }
+    for (auto &j : active->b) {
+        j.decorate(dpy);
+        j.text(dpy);
+    }
+    return;
 }
 
 void propertynot(Display* dpy, XEvent ev) {
@@ -222,6 +239,7 @@ void propertynot(Display* dpy, XEvent ev) {
             }
         }
     }
+    return;
 }
 
 
@@ -234,8 +252,10 @@ int main(void) {
     init_keys(dpy);
     for(;;)
     {
+        printf("nnnn\n");
         XNextEvent(dpy, &ev);
         lll("ev");
-        if (handler[ev.type] != nullptr) { handler[ev.type](dpy, ev); }
+        printf("evtype: %d\n", ev.type);
+        if (handler[ev.type] != nullptr) { XGrabServer(dpy); handler[ev.type](dpy, ev); XUngrabServer(dpy); }
     }
 }

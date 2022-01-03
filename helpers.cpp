@@ -186,21 +186,16 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
             if (TITLEBAR_NAME > 0) {
                 switch (TITLEBAR_NAME) {
                 case center:
-                    XMoveResizeWindow(dpy, b.back().bid, 
-                    b.back().x + (x/2), b.back().y,
-                    b.back().w + x, 
-                    b.back().h);                    
+                    XResizeWindow(dpy, b.back().bid, 
+                    b.back().w + x, b.back().h);
                     break;
                 case left:
                     XResizeWindow(dpy, b.back().bid, 
-                    b.back().w + x, 
-                    b.back().h);
+                    b.back().w + x, b.back().h);
                     break;
                 case right:
-                    XMoveResizeWindow(dpy, b.back().bid, 
-                    b.back().x + x, b.back().y,
-                    b.back().w + x, 
-                    b.back().h); 
+                    XResizeWindow(dpy, b.back().bid, 
+                    b.back().w + x, b.back().h);
                     break;
                 default:
                     break;
@@ -213,6 +208,8 @@ void vswin::move(Display* dpy, int btn, int x, int y) {
         default:
             break;
     }
+    focus(dpy);
+    return;
 
 }
 

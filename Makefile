@@ -25,4 +25,4 @@ run:
 
 
 install: all
-	sudo cp vswm /usr/games/vswm
+	sudo cp -f vswm /usr/games/vswm
