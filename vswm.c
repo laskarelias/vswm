@@ -1,5 +1,5 @@
 /*                         
-__   _______      ___ __ ___  
+__   _______      ___ __ ___
 \ \ / / __\ \ /\ / / '_ ` _ \ 
  \ V /\__ \\ V  V /| | | | | |
   \_/ |___/ \_/\_/ |_| |_| |_|
@@ -326,7 +326,7 @@ void maximize(Display* dpy, XEvent ev, int arg) {
         XGetWindowAttributes(dpy, active->window, &attr);
         if (attr.width == XDisplayWidth(dpy, DefaultScreen(dpy)) && attr.height == XDisplayHeight(dpy, DefaultScreen(dpy)) && attr.x == -BORDER_WIDTH && attr.y == -BORDER_WIDTH) { XMoveResizeWindow(dpy, active->window, active->x, active->y, active->w, active->h); }
         else {
-            XMoveResizeWindow(dpy, active->window, -BORDER_WIDTH, -BORDER_WIDTH, XDisplayWidth(dpy, DefaultScreen(dpy)), XDisplayHeight(dpy, DefaultScreen(dpy)));
+            XMoveResizeWindow(dpy, active->window, -BORDER_WIDTH, -BORDER_WIDTH + BAR_HEIGHT + BAR_BORDER_WIDTH + BAR_SHADOW_Y, XDisplayWidth(dpy, DefaultScreen(dpy)), XDisplayHeight(dpy, DefaultScreen(dpy)) - BAR_HEIGHT - BAR_BORDER_WIDTH - BAR_SHADOW_Y);
             _status(dpy);
         }
     }

@@ -1,6 +1,6 @@
 #include "vswm.h"
 
-#define DEBUG 1
+#define DEBUG 0
 
 #define BAR_HEIGHT 15
 #define BAR_BACKGROUND 0xbbbbbb

@@ -3,7 +3,7 @@ CFLAGS?=-pedantic -Wall -O3
 
 all:
 	$(CC) $(CFLAGS) -I$(PREFIX)/include vswm.c -L$(PREFIX)/lib -lX11 -o vswm
-	cp vswm /usr/games
+	cp -f vswm /usr/games
 
 clean:
 	rm -f vswm
